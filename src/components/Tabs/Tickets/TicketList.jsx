@@ -293,7 +293,7 @@ const TicketListApp = () => {
                         </Typography>
 
                         <Box sx={{ mt: 0.6, display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%" }}>
-                          <Box sx={{ display: "flex", gap: 1 }}>
+                          <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.8 }}>
                             {row?.Status && (
                               <Chip
                                 label={row?.Status}
@@ -306,7 +306,13 @@ const TicketListApp = () => {
                                   bgcolor: statusStyle.bg,
                                   color: statusStyle.color,
                                   borderRadius: "8px",
-                                  "& .MuiChip-label": { px: 1 },
+                                  maxWidth: "100px",
+                                  "& .MuiChip-label": {
+                                    px: 1,
+                                    overflow: "hidden",
+                                    textOverflow: "ellipsis",
+                                    whiteSpace: "nowrap",
+                                  },
                                 }}
                               />
                             )}
@@ -321,7 +327,13 @@ const TicketListApp = () => {
                                 bgcolor: "#eef0f3",
                                 color: "#333",
                                 border: "1px solid #dadce0",
-                                "& .MuiChip-label": { px: 1 },
+                                maxWidth: "100px",
+                                "& .MuiChip-label": {
+                                  px: 1,
+                                  overflow: "hidden",
+                                  textOverflow: "ellipsis",
+                                  whiteSpace: "nowrap",
+                                },
                               }}
                             />
                             {row?.CreatedBy && (
@@ -340,6 +352,7 @@ const TicketListApp = () => {
                                   bgcolor: '#f3f3f3',
                                   color: '#666',
                                   border: '1px solid #e8e8e8',
+                                  maxWidth: "120px",
                                   "& .MuiChip-avatar": {
                                     width: 18,
                                     height: 18,
@@ -348,6 +361,9 @@ const TicketListApp = () => {
                                   },
                                   "& .MuiChip-label": {
                                     paddingLeft: "6px",
+                                    overflow: "hidden",
+                                    textOverflow: "ellipsis",
+                                    whiteSpace: "nowrap",
                                   },
                                 }}
                               />

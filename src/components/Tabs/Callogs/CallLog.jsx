@@ -188,35 +188,59 @@ const CallLogsApp = () => {
                       <Typography sx={{ fontSize: "0.75rem", color: COLORS?.textSecondary }}>{formatToISTAmPm(log?.time)}</Typography>
                     </Box>
                     <Typography sx={{ fontSize: "0.80rem", color: COLORS?.textSecondary, display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical", overflow: "hidden", mb: 0.5 }}>{log?.appname || "No AppName"}</Typography>
-                    {log?.Estatus && <Chip label={log?.Estatus} size="small" sx={{ height: 20, fontSize: "0.70rem", fontWeight: 600, bgcolor: getStatusColor(log?.Estatus).bg, color: getStatusColor(log?.Estatus).color }} />}
-                    {log?.callBy && (
-                      <Chip
-                        label={log?.callBy}
-                        size="small"
-                        avatar={
-                          <Avatar sx={{ width: 18, height: 18, fontSize: "0.6rem", bgcolor: '#EC4899', color: '#fff' }}>
-                            {log?.callBy?.charAt(0)?.toUpperCase()}
-                          </Avatar>
-                        }
-                        sx={{
-                          height: 22,
-                          fontSize: "0.70rem",
-                          fontWeight: 600,
-                          bgcolor: '#f3f3f3',
-                          color: '#666',
-                          border: '1px solid #e8e8e8',
-                          "& .MuiChip-avatar": {
-                            width: 18,
-                            height: 18,
-                            marginLeft: "2px",
-                            color: '#fff',
-                          },
-                          "& .MuiChip-label": {
-                            paddingLeft: "6px",
-                          },
-                        }}
-                      />
-                    )}
+                    <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.8, alignItems: "center" }}>
+                      {log?.Estatus && (
+                        <Chip
+                          label={log?.Estatus}
+                          size="small"
+                          sx={{
+                            height: 20,
+                            fontSize: "0.70rem",
+                            fontWeight: 600,
+                            bgcolor: getStatusColor(log?.Estatus).bg,
+                            color: getStatusColor(log?.Estatus).color,
+                            maxWidth: "120px",
+                            "& .MuiChip-label": {
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                              whiteSpace: "nowrap",
+                            },
+                          }}
+                        />
+                      )}
+                      {log?.callBy && (
+                        <Chip
+                          label={log?.callBy}
+                          size="small"
+                          avatar={
+                            <Avatar sx={{ width: 18, height: 18, fontSize: "0.6rem", bgcolor: "#EC4899", color: "#fff" }}>
+                              {log?.callBy?.charAt(0)?.toUpperCase()}
+                            </Avatar>
+                          }
+                          sx={{
+                            height: 22,
+                            fontSize: "0.70rem",
+                            fontWeight: 600,
+                            bgcolor: "#f3f3f3",
+                            color: "#666",
+                            border: "1px solid #e8e8e8",
+                            maxWidth: "150px",
+                            "& .MuiChip-avatar": {
+                              width: 18,
+                              height: 18,
+                              marginLeft: "2px",
+                              color: "#fff",
+                            },
+                            "& .MuiChip-label": {
+                              paddingLeft: "6px",
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                              whiteSpace: "nowrap",
+                            },
+                          }}
+                        />
+                      )}
+                    </Box>
                   </Box>
                 </ListItemButton>
               );

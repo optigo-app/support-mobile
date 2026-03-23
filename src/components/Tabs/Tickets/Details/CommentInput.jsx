@@ -12,7 +12,7 @@ const MobileCommentBox = ({ user, TicketNo }) => {
   const [comment, setComment] = useState("");
   const [files, setFiles] = useState([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
-    const [isCompressing, setIsCompressing] = useState(false); // UI state for compression
+  const [isCompressing, setIsCompressing] = useState(false); // UI state for compression
   const fileRef = useRef(null);
   const { AddComment } = useTicket();
 
@@ -46,85 +46,85 @@ const MobileCommentBox = ({ user, TicketNo }) => {
   //   e.target.value = null; // Reset input so same file can be selected again if needed
   // };
 
-    const handleFileUpload = async (e) => {
-      const selectedFiles = Array.from(e.target.files);
-      if (selectedFiles.length === 0) return;
-  
-      const maxSizeInBytes = 15 * 1024 * 1024; // 15 MB
-      const validFilesToProcess = [];
-      const invalidFiles = [];
-  
-      // A. Initial Size Validation
-      selectedFiles.forEach((file) => {
-        if (file.size <= maxSizeInBytes) {
-          validFilesToProcess.push(file);
-        } else {
-          invalidFiles.push(file);
-        }
-      });
-  
-      if (invalidFiles.length > 0) {
-        const errorMsg = invalidFiles.map((f) => f.name).join(", ");
-        alert(`File(s) too large (Max 15MB): ${errorMsg}`);
+  const handleFileUpload = async (e) => {
+    const selectedFiles = Array.from(e.target.files);
+    if (selectedFiles.length === 0) return;
+
+    const maxSizeInBytes = 15 * 1024 * 1024; // 15 MB
+    const validFilesToProcess = [];
+    const invalidFiles = [];
+
+    // A. Initial Size Validation
+    selectedFiles.forEach((file) => {
+      if (file.size <= maxSizeInBytes) {
+        validFilesToProcess.push(file);
+      } else {
+        invalidFiles.push(file);
       }
-  
-      if (validFilesToProcess.length === 0) {
-        e.target.value = null;
-        return;
+    });
+
+    if (invalidFiles.length > 0) {
+      const errorMsg = invalidFiles.map((f) => f.name).join(", ");
+      alert(`File(s) too large (Max 15MB): ${errorMsg}`);
+    }
+
+    if (validFilesToProcess.length === 0) {
+      e.target.value = null;
+      return;
+    }
+
+    try {
+      setIsCompressing(true);
+
+      // B. Separate Images for Compression
+      const imageFiles = validFilesToProcess.filter((f) => f.type.startsWith("image/"));
+      const otherFiles = validFilesToProcess.filter((f) => !f.type.startsWith("image/"));
+
+      let compressedImages = [];
+
+      // C. Compress Images
+      if (imageFiles.length > 0) {
+        compressedImages = await compressImagesToWebP(imageFiles);
       }
-  
-      try {
-        setIsCompressing(true);
-  
-        // B. Separate Images for Compression
-        const imageFiles = validFilesToProcess.filter((f) => f.type.startsWith("image/"));
-        const otherFiles = validFilesToProcess.filter((f) => !f.type.startsWith("image/"));
-  
-        let compressedImages = [];
-  
-        // C. Compress Images
-        if (imageFiles.length > 0) {
-          compressedImages = await compressImagesToWebP(imageFiles);
-        }
-  
-        // D. Format Compressed Images back to State Object
-        const formattedImages = compressedImages.map((img) => {
-          // Reconstruct File object from Blob
-          const fileObj = new File([img.blob], img.compressedName, {
-            type: "image/webp",
-            lastModified: new Date().getTime(),
-          });
-  
-          return {
-            file: fileObj,
-            id: Math.random().toString(36).substr(2, 9),
-            preview: img.previewUrl,
-            name: img.compressedName,
-            size: fileObj.size, // Update size to compressed size
-          };
+
+      // D. Format Compressed Images back to State Object
+      const formattedImages = compressedImages.map((img) => {
+        // Reconstruct File object from Blob
+        const fileObj = new File([img.blob], img.compressedName, {
+          type: "image/webp",
+          lastModified: new Date().getTime(),
         });
-  
-        // E. Format Other Files
-        const formattedOthers = otherFiles.map((file) => ({
-          file: file,
+
+        return {
+          file: fileObj,
           id: Math.random().toString(36).substr(2, 9),
-          preview: null,
-          name: file.name,
-          size: file.size,
-        }));
-  
-        // F. Update State
-        setFiles((prev) => [...prev, ...formattedImages, ...formattedOthers]);
-  
-      } catch (error) {
-        console.error("Error processing files:", error);
-        alert("Error processing images.");
-      } finally {
-        setIsCompressing(false);
-        e.target.value = null; // Reset input
-      }
-    };
-  
+          preview: img.previewUrl,
+          name: img.compressedName,
+          size: fileObj.size, // Update size to compressed size
+        };
+      });
+
+      // E. Format Other Files
+      const formattedOthers = otherFiles.map((file) => ({
+        file: file,
+        id: Math.random().toString(36).substr(2, 9),
+        preview: null,
+        name: file.name,
+        size: file.size,
+      }));
+
+      // F. Update State
+      setFiles((prev) => [...prev, ...formattedImages, ...formattedOthers]);
+
+    } catch (error) {
+      console.error("Error processing files:", error);
+      alert("Error processing images.");
+    } finally {
+      setIsCompressing(false);
+      e.target.value = null; // Reset input
+    }
+  };
+
 
   const removeFile = (id) => {
     setFiles(files.filter((f) => f.id !== id));
@@ -162,14 +162,14 @@ const MobileCommentBox = ({ user, TicketNo }) => {
         name: user?.id,
         attachment: uploadFilePath?.files
           ? {
-              preview: uploadFilePath.files.map((file) => file.url).join(","),
-              name: uploadFilePath.files[0]?.fileName,
-            }
+            preview: uploadFilePath.files.map((file) => file.url).join(","),
+            name: uploadFilePath.files[0]?.fileName,
+          }
           : null,
-        Role: 1, 
-        isOfficeUseOnly: false, 
-        customerId : user?.custid ,
-        UserId : user?.id,
+        Role: 1,
+        isOfficeUseOnly: false,
+        customerId: user?.custid,
+        UserId: user?.id,
       };
 
       await AddComment(newComment);
@@ -185,9 +185,9 @@ const MobileCommentBox = ({ user, TicketNo }) => {
 
   return (
     <Paper
-      elevation={3} 
+      elevation={3}
       sx={{
-        position: "relative", 
+        position: "relative",
         bottom: 0,
         width: "100%",
         borderRadius: "12px 12px 0 0",
@@ -209,7 +209,7 @@ const MobileCommentBox = ({ user, TicketNo }) => {
           >
             {user?.fullName ? user.fullName?.charAt(0)?.toUpperCase() : "U"}
           </Avatar>
-          <Typography variant="subtitle2" sx={{ fontWeight: 600, fontSize: "0.85rem" ,textTransform: "capitalize" }}>
+          <Typography variant="subtitle2" sx={{ fontWeight: 600, fontSize: "0.85rem", textTransform: "capitalize" }}>
             Replying as {user?.fullName || "User"}
           </Typography>
         </Stack>
@@ -291,17 +291,17 @@ const MobileCommentBox = ({ user, TicketNo }) => {
       {/* Actions Toolbar */}
       <Box sx={{ p: 1.5, pt: 0 }}>
         <Stack direction="row" alignItems="center" justifyContent="space-between">
-          <IconButton 
-          onClick={() => fileRef.current.click()}
-                    disabled={isSubmitting || isCompressing}
+          <IconButton
+            onClick={() => fileRef.current.click()}
+            disabled={isSubmitting || isCompressing}
             sx={{ color: "#555", border: "1px solid #eee" }}
-             size="small"
-             >
-             {isCompressing ? (
-             <CircularProgress size={24} /> 
-          ) : (
-             <AttachFileRoundedIcon />
-          )}
+            size="small"
+          >
+            {isCompressing ? (
+              <CircularProgress size={24} />
+            ) : (
+              <AttachFileRoundedIcon />
+            )}
           </IconButton>
 
           <input type="file" ref={fileRef} hidden multiple onChange={handleFileUpload} accept="image/*,application/pdf,.doc,.docx" />
@@ -316,7 +316,7 @@ const MobileCommentBox = ({ user, TicketNo }) => {
               px: 3,
               background: `linear-gradient(135deg, #ec14d0ff 0%, #532ebe 100%)`,
               opacity: isSubmitting ? 0.7 : 1,
-              color: "#fff",
+              color: "#fff !important",
             }}
             endIcon={isSubmitting ? <CircularProgress size={16} color="inherit" /> : <SendRoundedIcon fontSize="small" sx={{ color: "#fff" }} />}
           >
