@@ -82,9 +82,9 @@ const Hello = () => {
         }}
       >
         <Box component={"img"}
-        //  src={Assets.illustrations.onlineWorld}
-        src={Assets.Banner.banner5}
-          width="400px" height="400px" sx={{ objectFit: "contain", opacity: 0.95 }} />
+          //  src={Assets.illustrations.onlineWorld}
+          src={Assets.Banner.banner5}
+          width="400px" height="400px" sx={{ objectFit: "contain", opacity: 0.95, paddingBottom: '10rem' }} />
       </Box>
     </Box>
   );

@@ -18,14 +18,17 @@ const SupportMobile = () => {
     const tabInUrl = tabParam !== null ? parseInt(tabParam, 10) : null;
 
     if (tabInUrl !== null && tabInUrl !== lastSyncedTabId.current) {
+      // 1. URL changed (e.g. back button) -> Update Store
       setTabId(tabInUrl);
       lastSyncedTabId.current = tabInUrl;
     } else if (tabId !== lastSyncedTabId.current) {
+      // 2. Store changed (e.g. UI click) -> Update URL
       const newParams = new URLSearchParams(searchParams);
       newParams.set("tab", tabId.toString());
       setSearchParams(newParams);
       lastSyncedTabId.current = tabId;
     } else if (tabInUrl === null) {
+      // 3. Initial load or no tab in URL -> Sync Store to URL
       const newParams = new URLSearchParams(searchParams);
       newParams.set("tab", tabId.toString());
       setSearchParams(newParams, { replace: true });
