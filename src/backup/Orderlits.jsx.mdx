@@ -1,0 +1,307 @@
+import React, { useState, useMemo } from "react";
+import { Box, Typography, Avatar, Chip, ListItemButton, List, Divider, Stack } from "@mui/material";
+import { ChevronRightRounded, LocalShippingRounded, Inventory2Rounded, CancelRounded, CheckCircleRounded, CreditCardRounded, AttachMoneyRounded } from "@mui/icons-material";
+
+// --- Assumed Imports ---
+import ScrollArea, { EmailScrollArea } from "../../ui/ScrollArea";
+import TicketFilterDrawer from "../Tickets/TicketFilterDrawer";
+import PremiumFloatingPagination from "../../ui/PremiumFloatingPagination";
+import GmailStyleHeader from "../Callogs/Header";
+
+// --- 1. MOCK DATA GENERATOR (Order Context) ---
+const generateMockOrderData = () => {
+  const statuses = ["Delivered", "Shipped", "Processing", "Cancelled"];
+  const paymentStatuses = ["Paid", "Pending", "Refunded"];
+  const customers = ["Acme Corp", "Globex Inc", "Soylent Corp", "Initech", "Umbrella Corp", "Cyberdyne"];
+  const products = ["Enterprise License x5", "Server Rack Unit (42U)", "Ergonomic Office Chairs (Set of 10)", "MacBook Pro M3 Max", "Cloud Storage Plan (1TB)", "Dell UltraSharp Monitor 4K"];
+
+  return Array.from({ length: 30 }).map((_, i) => {
+    const status = statuses[Math.floor(Math.random() * statuses.length)];
+    const payment = status === "Cancelled" ? "Refunded" : paymentStatuses[Math.floor(Math.random() * 2)]; // Mostly Paid or Pending
+    const customer = customers[Math.floor(Math.random() * customers.length)];
+
+    return {
+      id: `#ORD-${7000 + i}`,
+      customer: customer,
+      items: `${products[Math.floor(Math.random() * products.length)]} + ${Math.floor(Math.random() * 3) + 1} accessories`,
+      date: "Nov 25, 2025",
+      status: status,
+      paymentStatus: payment,
+      amount: (Math.random() * 5000 + 150).toFixed(2),
+      itemsCount: Math.floor(Math.random() * 10) + 1,
+    };
+  });
+};
+
+const orderLogsList = generateMockOrderData();
+
+// --- 2. COLOR PALETTE CONSTANTS ---
+const COLORS = {
+  textPrimary: "#1A1A1A",
+  textSecondary: "#777777",
+  successBg: "rgba(58, 248, 126, 0.08)",
+  successText: "#0f8c3a", // Green
+  processBg: "rgba(74, 102, 255, 0.08)",
+  processText: "#4A66FF", // Blue
+  warnBg: "rgba(255, 167, 38, 0.1)",
+  warnText: "#F57C00", // Orange
+  errorBg: "#FFEBEE",
+  errorText: "#D32F2F", // Red
+  neutralBg: "rgba(0, 0, 0, 0.06)",
+  neutralText: "#555",
+};
+
+// --- 3. HELPER FUNCTIONS ---
+function getAvatarGradient(id) {
+  // Generates consistent gradients based on Order ID
+  const gradients = [
+    "linear-gradient(135deg, #11998e 0%, #38ef7d 100%)", // Green (Money/Business)
+    "linear-gradient(135deg, #FC466B 0%, #3F5EFB 100%)", // Pink/Blue
+    "linear-gradient(135deg, #ee0979 0%, #ff6a00 100%)", // Orange/Red
+    "linear-gradient(135deg, #8E2DE2 0%, #4A00E0 100%)", // Deep Purple
+    "linear-gradient(135deg, #00b09b 0%, #96c93d 100%)", // Moss Green
+  ];
+  const index = parseInt(id.replace(/\D/g, ""), 10) % gradients.length;
+  return gradients[index];
+}
+
+function getStatusStyle(status) {
+  switch (status) {
+    case "Delivered":
+      return { bg: COLORS.successBg, color: COLORS.successText, icon: <CheckCircleRounded sx={{ fontSize: 14 }} /> };
+    case "Shipped":
+      return { bg: COLORS.processBg, color: COLORS.processText, icon: <LocalShippingRounded sx={{ fontSize: 14 }} /> };
+    case "Processing":
+      return { bg: COLORS.warnBg, color: COLORS.warnText, icon: <Inventory2Rounded sx={{ fontSize: 14 }} /> };
+    case "Cancelled":
+      return { bg: COLORS.errorBg, color: COLORS.errorText, icon: <CancelRounded sx={{ fontSize: 14 }} /> };
+    default:
+      return { bg: COLORS.neutralBg, color: COLORS.neutralText, icon: <Inventory2Rounded sx={{ fontSize: 14 }} /> };
+  }
+}
+
+// --- 4. MAIN COMPONENT ---
+const OrderDashboardApp = () => {
+  const [filterTab, setFilterTab] = useState(0);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [anchorElSort, setAnchorElSort] = useState(false);
+  const scrollRef = React.useRef(null);
+
+  // -- Derived Data Logic --
+  const filteredOrders = useMemo(() => {
+    return orderLogsList.filter((order) => {
+      // Text Search
+      const matchesSearch = order.id.toLowerCase().includes(searchQuery.toLowerCase()) || order.customer.toLowerCase().includes(searchQuery.toLowerCase());
+
+      // Tab Filter (Simulated)
+      // 0: All, 1: Pending/Processing, 2: Completed, 3: Cancelled
+      let matchesFilter = true;
+      if (filterTab === 1) matchesFilter = ["Processing", "Shipped"].includes(order.status);
+      if (filterTab === 2) matchesFilter = order.status === "Delivered";
+      if (filterTab === 3) matchesFilter = order.status === "Cancelled";
+
+      return matchesSearch && matchesFilter;
+    });
+  }, [searchQuery, filterTab]);
+
+  const paginatedOrders = useMemo(() => {
+    return filteredOrders.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
+  }, [filteredOrders, page, rowsPerPage]);
+
+  const Scroller = () => {
+    setTimeout(() => {
+      if (scrollRef.current) {
+        scrollRef.current.scrollTo({ top: 0, behavior: "smooth" });
+      }
+    }, 10);
+  };
+
+  const handleChangePage = (event, newPage) => {
+    Scroller();
+    setPage(newPage);
+  };
+  const handleChangeRowsPerPage = (event) => {
+    Scroller();
+    setRowsPerPage(parseInt(event.target.value, 10));
+    setPage(0);
+  };
+
+  return (
+    <>
+      <Box
+        sx={{
+          display: "flex",
+          flexDirection: "column",
+          overflow: "hidden",
+          bgcolor: "#f0f2f5",
+          height: "100%",
+        }}
+      >
+        <GmailStyleHeader anchorElSort={anchorElSort} setAnchorElSort={setAnchorElSort} searchQuery={searchQuery} setSearchQuery={setSearchQuery} title="Search Orders" />
+
+        <EmailScrollArea ref={scrollRef}>
+          {paginatedOrders.length === 0 ? (
+            <Box sx={{ p: 5, textAlign: "center", color: COLORS.textSecondary }}>
+              <Typography variant="h6">No orders found</Typography>
+              <Typography variant="body2">Clear search or adjust filters</Typography>
+            </Box>
+          ) : (
+            <List disablePadding>
+              {paginatedOrders.map((order) => {
+                const statusStyle = getStatusStyle(order.status);
+                const isPaid = order.paymentStatus === "Paid";
+
+                return (
+                  <React.Fragment key={order.id}>
+                    <ListItemButton
+                      sx={{
+                        py: 1.5,
+                        px: 1.7,
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 1.6,
+                        position: "relative",
+                        transition: "0.25s",
+                        borderBottom: "1px solid rgba(0,0,0,0.06)",
+                        "&:hover": {
+                          bgcolor: "rgba(74,102,255,0.03)",
+                          "& .hover-actions": { opacity: 1 },
+                        },
+                      }}
+                    >
+                      {/* Avatar: Box/Product shape */}
+                      <Avatar
+                        sx={{
+                          width: 44,
+                          height: 44,
+                          borderRadius:25, // Squircle for "Package" feel
+                          fontWeight: 700,
+                          fontSize: 14,
+                          background: getAvatarGradient(order.id),
+                          color: "#fff",
+                          boxShadow: "0 3px 10px rgba(0,0,0,0.12)",
+                          display: "flex",
+                          flexDirection: "column",
+                          lineHeight: 1,
+                        }}
+                      >
+                        <Box component="span" sx={{ fontSize: 10, opacity: 0.8, mb: 0.2 }}>
+                          ORD
+                        </Box>
+                        {order.id.slice(-2)}
+                      </Avatar>
+
+                      {/* Main Content */}
+                      <Box sx={{ flex: 1, minWidth: 0 }}>
+                        {/* Top Row: Order ID & Customer */}
+                        <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                          <Stack direction="row" spacing={1} alignItems="center">
+                            <Typography
+                              sx={{
+                                fontWeight: 600,
+                                fontSize: 14,
+                                color: COLORS.textPrimary,
+                              }}
+                            >
+                              {order.id}
+                            </Typography>
+                            <Box sx={{ width: 4, height: 4, bgcolor: "#ccc", borderRadius: "50%" }} />
+                            <Typography sx={{ fontSize: 13, color: COLORS.textSecondary }}>{order.customer}</Typography>
+                          </Stack>
+
+                          {/* Chevron */}
+                          <ChevronRightRounded sx={{ fontSize: 20, color: "#ccc" }} />
+                        </Box>
+
+                        {/* Description: Items */}
+                        <Typography
+                          sx={{
+                            fontSize: 11.5,
+                            color: "#555",
+                            mt: 0.3,
+                            fontWeight: 500,
+                            display: "-webkit-box",
+                            WebkitLineClamp: 1,
+                            WebkitBoxOrient: "vertical",
+                            overflow: "hidden",
+                            pr: 8, // Make room for chip
+                          }}
+                        >
+                          {order.items}
+                        </Typography>
+
+                        {/* Bottom Metadata Row: Price, Payment, Date */}
+                        <Box
+                          sx={{
+                            display: "flex",
+                            alignItems: "center",
+                            mt: 0.5,
+                            gap: 1.5,
+                          }}
+                        >
+                          {/* Price */}
+                          <Typography sx={{ fontSize: 12, fontWeight: 700, color: COLORS.textPrimary }}>${order.amount}</Typography>
+
+                          {/* Payment Status Badge */}
+                          <Chip
+                            label={order.paymentStatus}
+                            icon={order.paymentStatus === "Paid" ? <CheckCircleRounded /> : <CreditCardRounded />}
+                            size="small"
+                            sx={{
+                              height: 18,
+                              fontSize: 9,
+                              fontWeight: 700,
+                              px: 0.5,
+                              bgcolor: isPaid ? "rgba(58, 248, 126, 0.1)" : "rgba(0,0,0,0.06)",
+                              color: isPaid ? "#0f8c3a" : "#666",
+                              border: "none",
+                              "& .MuiChip-icon": { fontSize: 12, color: "inherit" },
+                            }}
+                          />
+
+                          <Typography sx={{ fontSize: 11, color: "#999" }}>• {order.date}</Typography>
+                        </Box>
+                      </Box>
+
+                      {/* Status Chip (Top Right) */}
+                      <Chip
+                        icon={statusStyle.icon}
+                        label={order.status}
+                        size="small"
+                        sx={{
+                          position: "absolute",
+                          right: 12,
+                          top: 12,
+                          height: 20,
+                          fontSize: 10,
+                          fontWeight: 700,
+                          bgcolor: statusStyle.bg,
+                          color: statusStyle.color,
+                          borderRadius: 1,
+                          px: 0.2,
+                          textTransform: "capitalize",
+                          "& .MuiChip-icon": {
+                            color: statusStyle.color,
+                            marginLeft: "4px",
+                          },
+                        }}
+                      />
+                    </ListItemButton>
+                  </React.Fragment>
+                );
+              })}
+            </List>
+          )}
+        </EmailScrollArea>
+
+        <PremiumFloatingPagination page={page} rowsPerPage={rowsPerPage} count={filteredOrders.length} onPageChange={handleChangePage} onRowsPerPageChange={handleChangeRowsPerPage} />
+
+        <TicketFilterDrawer onClose={() => setAnchorElSort(false)} open={anchorElSort} title="Filter Orders" />
+      </Box>
+    </>
+  );
+};
+
+export default OrderDashboardApp;

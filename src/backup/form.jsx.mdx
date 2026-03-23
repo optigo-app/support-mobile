@@ -1,0 +1,252 @@
+import React from "react";
+import { Box, Typography, InputBase, FormLabel, IconButton, Grid, Avatar, AvatarGroup, Button, Stack, Paper, Container, useTheme, useMediaQuery } from "@mui/material";
+import { Share as ShareIcon, KeyboardArrowDown as ArrowDownIcon, Add as AddIcon, DescriptionOutlined as FileIcon, DeleteOutline as TrashIcon, DragIndicator as DragIcon, Check as CheckIcon } from "@mui/icons-material";
+
+const colors = {
+  bg: "#F9FAFB", // Light gray background
+  textMain: "#111827", // Dark charcoal
+  textSub: "#6B7280", // Muted gray
+  border: "#E5E7EB", // Light border
+  primary: "#3B82F6", // Bright Blue
+  primaryLight: "#EFF6FF", // Very light blue for selection
+  black: "#111827",
+};
+
+// Reusable Styles for the Input Container (Simulating the rounded look)
+const inputContainerStyle = {
+  border: `1px solid ${colors.border}`,
+  borderRadius: "16px", // High curvature
+  padding: "10px 16px",
+  backgroundColor: "#FFFFFF",
+  display: "flex",
+  alignItems: "center",
+  marginTop: "8px",
+  transition: "border-color 0.2s",
+  "&:hover": {
+    borderColor: "#d1d5db",
+  },
+  "&:focus-within": {
+    borderColor: colors.primary,
+    boxShadow: `0 0 0 2px ${colors.primaryLight}`,
+  },
+};
+
+const labelStyle = {
+  fontSize: "14px",
+  fontWeight: 600,
+  color: colors.textSub,
+  marginBottom: "4px",
+  display: "block",
+};
+
+// --- Sub-Components ---
+
+// 1. Reusable Custom Input Field
+const CustomField = ({ label, placeholder, multiline = false, icon, value, readOnly }) => (
+  <Box sx={{ mb: 3 }}>
+    <FormLabel sx={labelStyle}>{label}</FormLabel>
+    <Box sx={{ ...inputContainerStyle, alignItems: multiline ? "flex-start" : "center" }}>
+      <InputBase
+        fullWidth
+        placeholder={placeholder}
+        multiline={multiline}
+        minRows={multiline ? 3 : 1}
+        value={value}
+        readOnly={readOnly}
+        sx={{
+          fontSize: "15px",
+          fontWeight: 500,
+          color: colors.textMain,
+          "& input::placeholder": { opacity: 0.6 },
+          "& textarea::placeholder": { opacity: 0.6 },
+        }}
+      />
+      {icon && <Box sx={{ color: colors.textSub, ml: 1 }}>{icon}</Box>}
+    </Box>
+  </Box>
+);
+
+// 2. Priority Selection Pill
+const PriorityButton = ({ label, selected }) => (
+  <Button
+    fullWidth
+    disableElevation
+    variant={selected ? "contained" : "outlined"}
+    sx={{
+      borderRadius: "50px",
+      textTransform: "none",
+      fontWeight: 600,
+      border: selected ? "none" : `1px solid ${colors.border}`,
+      bgcolor: selected ? "#DBEAFE" : "transparent", // Light Blue for selected
+      color: selected ? "#1D4ED8" : colors.textSub, // Dark Blue text for selected
+      height: "44px",
+      "&:hover": {
+        bgcolor: selected ? "#DBEAFE" : "#f3f4f6",
+        border: selected ? "none" : `1px solid ${colors.border}`,
+      },
+    }}
+  >
+    {label}
+  </Button>
+);
+
+// 3. Task Item (The draggable list item)
+const TaskDetailItem = ({ text }) => (
+  <Box sx={{ display: "flex", alignItems: "flex-start", gap: 1, mb: 2 }}>
+    <Box sx={{ pt: 1.5, color: "#9CA3AF", cursor: "grab" }}>
+      <DragIcon fontSize="small" />
+    </Box>
+    <Box sx={{ ...inputContainerStyle, flex: 1, mt: 0 }}>
+      <InputBase fullWidth multiline value={text} sx={{ fontSize: "14px", color: colors.textMain, fontWeight: 500 }} />
+    </Box>
+    <IconButton sx={{ mt: 1, color: colors.textSub }}>
+      <TrashIcon fontSize="small" />
+    </IconButton>
+  </Box>
+);
+
+const AddTaskForm = () => {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
+
+  return (
+    <Container
+      maxWidth="sm"
+      disableGutters={isMobile}
+      sx={{
+        bgcolor: "#FFFFFF",
+      }}
+    >
+      {/* Header */}
+      <Box sx={{ p: 1, display: "flex", justifyContent: "space-between", alignItems: "center", mb: 1 }}>
+        <Typography variant="h5" sx={{ fontWeight: 800, color: colors.black }}>
+          Add new task
+        </Typography>
+        <IconButton sx={{ border: `1px solid ${colors.border}` }}>
+          <ShareIcon fontSize="small" sx={{ color: colors.textMain }} />
+        </IconButton>
+      </Box>
+
+      <Box sx={{ px: 1, pb: 2 }}>
+        {/* Task Name */}
+        <CustomField label="Task Name" placeholder="Enter task name" value="Design Homepage Mockups" />
+
+        {/* Description */}
+        <CustomField label="Description" multiline placeholder="Add description..." value="Create high-fidelity mockups for the new homepage, following the latest brand guidelines. Include both desktop and mobile versions." />
+
+        <Grid container spacing={2} sx={{ mb: 3 }}>
+          <Grid item xs={6}>
+            <CustomField label="Start Date" value="10/20/2024" icon={<ArrowDownIcon />} readOnly />
+          </Grid>
+          <Grid item xs={6}>
+            <CustomField label="Due Date" value="11/20/2024" icon={<ArrowDownIcon />} readOnly />
+          </Grid>
+        </Grid>
+
+        {/* Priority */}
+        <Box sx={{ mb: 4 }}>
+          <FormLabel sx={labelStyle}>Priority</FormLabel>
+          <Stack direction="row" spacing={1} sx={{ mt: 1 }}>
+            <PriorityButton label="High" selected={true} />
+            <PriorityButton label="Medium" selected={false} />
+            <PriorityButton label="Low" selected={false} />
+          </Stack>
+        </Box>
+
+        {/* Assign To */}
+        <Box sx={{ mb: 4 }}>
+          <FormLabel sx={labelStyle}>Assign to</FormLabel>
+          <Stack direction="row" alignItems="center" spacing={1} sx={{ mt: 1 }}>
+            <AvatarGroup max={5} sx={{ "& .MuiAvatar-root": { width: 44, height: 44, border: "2px solid white" } }}>
+              <Avatar src="https://i.pravatar.cc/150?img=11" />
+              <Avatar src="https://i.pravatar.cc/150?img=12" />
+              <Avatar src="https://i.pravatar.cc/150?img=33" />
+              <Avatar src="https://i.pravatar.cc/150?img=4" />
+            </AvatarGroup>
+            <Box
+              sx={{
+                width: 44,
+                height: 44,
+                borderRadius: "50%",
+                border: `1px dashed ${colors.textSub}`,
+                display: "flex",
+                justifyContent: "center",
+                alignItems: "center",
+                cursor: "pointer",
+                color: colors.textSub,
+              }}
+            >
+              <AddIcon />
+            </Box>
+          </Stack>
+        </Box>
+
+        {/* Attachment */}
+        <Box sx={{ mb: 4 }}>
+          <FormLabel sx={labelStyle}>Add Attachment</FormLabel>
+          <Box sx={{ ...inputContainerStyle, justifyContent: "space-between", bgcolor: "#F9FAFB" }}>
+            <Stack direction="row" alignItems="center" spacing={1.5} sx={{ overflow: "hidden" }}>
+              <FileIcon fontSize="small" sx={{ color: colors.textMain }} />
+              <Typography noWrap variant="body2" sx={{ fontWeight: 600 }}>
+                Predictive_Maintenance_Model_v2.ipynb
+              </Typography>
+            </Stack>
+            <IconButton size="small">
+              <TrashIcon fontSize="small" sx={{ color: colors.textSub }} />
+            </IconButton>
+          </Box>
+        </Box>
+
+        {/* Task Details Checklist */}
+        <Box sx={{ mb: 4 }}>
+          <FormLabel sx={labelStyle}>Task Details</FormLabel>
+          <Box sx={{ mt: 1 }}>
+            <TaskDetailItem text="A section that briefly highlights the brand's main offerings or key features" />
+            <TaskDetailItem text="Start with a wireframe to map out the structure and layout before applying styling" />
+            <TaskDetailItem text="Select fonts that match the brand's identity (e.g., use a modern sans-serif for headings)" />
+          </Box>
+
+          {/* Add New Button */}
+          <Button
+            fullWidth
+            variant="outlined"
+            sx={{
+              mt: 1,
+              borderRadius: "50px",
+              border: `1px solid ${colors.border}`,
+              color: colors.textMain,
+              textTransform: "none",
+              fontWeight: 600,
+              height: "48px",
+            }}
+          >
+            Add New
+          </Button>
+        </Box>
+
+        {/* Final Submit Button */}
+        <Button
+          fullWidth
+          variant="contained"
+          sx={{
+            bgcolor: colors.black,
+            color: "white",
+            borderRadius: "50px",
+            height: "56px",
+            textTransform: "none",
+            fontSize: "16px",
+            fontWeight: 700,
+            boxShadow: "0 4px 14px 0 rgba(0,0,0,0.2)",
+            "&:hover": {
+              bgcolor: "#333",
+            },
+          }}
+        >
+          Submit
+        </Button>
+      </Box>
+    </Container>
+  );
+};
+
+export default AddTaskForm;

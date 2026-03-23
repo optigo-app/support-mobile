@@ -1,0 +1,886 @@
+
+
+// import React, { useState, useMemo, useRef } from "react";
+// import { Box, Typography, Avatar, Chip, List, ListItemButton, Divider, useTheme, ListItemAvatar } from "@mui/material";
+// import { ChevronRightRounded, CircleRounded, ConfirmationNumberRounded } from "@mui/icons-material";
+
+// // Shared Components (Assumed from your project structure)
+// import ScrollArea, { EmailScrollArea } from "../../ui/ScrollArea";
+// import TicketFilterDrawer from "../Tickets/TicketFilterDrawer";
+// import PremiumFloatingPagination from "../../ui/PremiumFloatingPagination";
+// import GmailStyleHeader from "../Callogs/Header"; // Reusing the header you liked
+
+// // --- 1. MOCK DATA GENERATOR ---
+// const generateTicketData = () => {
+//   const priorities = ["High", "Medium", "Low"];
+//   const statuses = ["Open", "In Progress", "Resolved"];
+//   const customers = ["TechFlow", "MediCare", "LogiStick", "FinCorp", "EduLearn"];
+//   const subjects = ["Login API failing with 500 error", "Dashboard not loading on Safari", "Request for new feature: Dark Mode", "Billing invoice incorrect for Nov", "User permission sync issue"];
+
+//   return Array.from({ length: 30 }).map((_, i) => {
+//     const priority = priorities[Math.floor(Math.random() * priorities.length)];
+//     const status = statuses[Math.floor(Math.random() * statuses.length)];
+//     return {
+//       id: `TCK-${1000 + i}`,
+//       subject: subjects[Math.floor(Math.random() * subjects.length)],
+//       customer: customers[Math.floor(Math.random() * customers.length)],
+//       description: "User reported that after the latest update, the specific module is crashing constantly. Logs attached.",
+//       date: "Nov 25",
+//       priority: priority,
+//       status: status,
+//       agent: `Agent ${i + 1}`,
+//     };
+//   });
+// };
+
+// const ticketList = generateTicketData();
+
+// // --- 2. COLOR PALETTE ---
+// const COLORS = {
+//   textPrimary: "#1A1A1A",
+//   textSecondary: "#777777",
+//   bgLight: "#F8F9FC",
+//   highPriority: "#e11d48", // Red
+//   medPriority: "#d97706", // Orange
+//   lowPriority: "#059669", // Green
+// };
+
+// const TicketsApp = () => {
+//   // -- State --
+//   const [filterTab, setFilterTab] = useState("All");
+//   const [searchQuery, setSearchQuery] = useState("");
+//   const [page, setPage] = useState(0);
+//   const [rowsPerPage, setRowsPerPage] = useState(10);
+//   const [anchorElSort, setAnchorElSort] = useState(false);
+//   const scrollRef = useRef(null);
+
+//   // -- Helpers --
+//   const getPriorityColor = (priority) => {
+//     if (priority === "High") return COLORS.highPriority;
+//     if (priority === "Medium") return COLORS.medPriority;
+//     return COLORS.lowPriority;
+//   };
+
+//   const getStatusStyle = (status) => {
+//     switch (status) {
+//       case "Resolved":
+//         return { bg: "#ecfdf5", color: "#059669" }; // Green
+//       case "In Progress":
+//         return { bg: "#eff6ff", color: "#3b82f6" }; // Blue
+//       default:
+//         return { bg: "#f3f4f6", color: "#4b5563" }; // Grey (Open)
+//     }
+//   };
+
+//   const getAvatarGradient = (name) => {
+//     // Reusing your gradient logic for consistency
+//     const gradients = ["linear-gradient(135deg, #5A6FF2 0%, #3C4FDB 100%)", "linear-gradient(135deg, #4FB1F2 0%, #3588D8 100%)", "linear-gradient(135deg, #4CBFA6 0%, #349E88 100%)", "linear-gradient(135deg, #F26B72 0%, #D94A55 100%)"];
+//     return gradients[name.length % gradients.length];
+//   };
+
+//   // -- Filtering Logic --
+//   const filteredTickets = useMemo(() => {
+//     return ticketList.filter((ticket) => {
+//       // Search
+//       const matchesSearch = ticket.subject.toLowerCase().includes(searchQuery.toLowerCase()) || ticket.id.toLowerCase().includes(searchQuery.toLowerCase()) || ticket.customer.toLowerCase().includes(searchQuery.toLowerCase());
+
+//       // Filter Tabs (Assuming Header passes strings like "Missed" -> here we map to Status)
+//       let matchesFilter = true;
+//       if (filterTab === "Missed") matchesFilter = ticket.priority === "High"; // Example mapping
+//       if (filterTab === "Incoming") matchesFilter = ticket.status === "Open";
+
+//       return matchesSearch && matchesFilter;
+//     });
+//   }, [searchQuery, filterTab]);
+
+//   const paginatedTickets = useMemo(() => {
+//     return filteredTickets.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
+//   }, [filteredTickets, page, rowsPerPage]);
+
+//   const handleScrollToTop = () => {
+//     if (scrollRef.current) {
+//       scrollRef.current.scrollTo({ top: 0, behavior: "smooth" });
+//     }
+//   };
+
+//   return (
+//     <Box
+//       sx={{
+//         display: "flex",
+//         flexDirection: "column",
+//         overflow: "hidden",
+//         bgcolor: "#f0f2f5",
+//         height: "100vh",
+//       }}
+//     >
+//       {/* 1. Header (Reused) */}
+//       <GmailStyleHeader onSearch={(e) => setSearchQuery(e.target.value)} onFilterChange={(val) => setFilterTab(val)} anchorElSort={anchorElSort} setAnchorElSort={setAnchorElSort} searchQuery={searchQuery} setSearchQuery={setSearchQuery} title="Search Tickets" />
+
+//       {/* 2. Scroll Area */}
+//       <EmailScrollArea ref={scrollRef}>
+//         {paginatedTickets.length === 0 ? (
+//           <Box sx={{ p: 5, textAlign: "center", color: COLORS.textSecondary }}>
+//             <Typography variant="h6" fontWeight={700}>
+//               No tickets found
+//             </Typography>
+//             <Typography variant="body2">Try searching for a different ID or Subject</Typography>
+//           </Box>
+//         ) : (
+//           <List disablePadding>
+//             {paginatedTickets.map((ticket) => {
+//               const statusStyle = getStatusStyle(ticket.status);
+
+//               return (
+//                 <React.Fragment key={ticket.id}>
+//                   <ListItemButton
+//                     sx={{
+//                       py: 1.8,
+//                       px: 2,
+//                       display: "flex",
+//                       alignItems: "flex-start", // Top align for avatar
+//                       gap: 2,
+//                       position: "relative",
+//                       transition: "0.2s",
+//                       borderBottom: "1px solid rgba(0,0,0,0.06)",
+//                       "&:hover": {
+//                         bgcolor: "rgba(74,102,255,0.03)",
+//                       },
+//                     }}
+//                   >
+//                     {/* Left: Avatar */}
+//                     <Avatar
+//                       sx={{
+//                         width: 42,
+//                         height: 42,
+//                         borderRadius: "12px", // Slightly squared for Tickets to differentiate from Calls
+//                         fontWeight: 700,
+//                         fontSize: 16,
+//                         background: getAvatarGradient(ticket.customer),
+//                         color: "#fff",
+//                         boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
+//                         mt: 0.5, // Align with title
+//                       }}
+//                     >
+//                       {ticket.customer.charAt(0)}
+//                     </Avatar>
+
+//                     {/* Middle: Content */}
+//                     <Box sx={{ flex: 1, minWidth: 0 }}>
+//                       {/* Row 1: ID & Priority Dot */}
+//                       <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 0.5 }}>
+//                         <Typography
+//                           sx={{
+//                             fontSize: 11,
+//                             fontWeight: 700,
+//                             color: "#64748b",
+//                             bgcolor: "#f1f5f9",
+//                             px: 0.8,
+//                             borderRadius: 1,
+//                             letterSpacing: "0.02em",
+//                           }}
+//                         >
+//                           {ticket.id}
+//                         </Typography>
+//                         <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+//                           <CircleRounded sx={{ fontSize: 8, color: getPriorityColor(ticket.priority) }} />
+//                           <Typography sx={{ fontSize: 11, color: getPriorityColor(ticket.priority), fontWeight: 600 }}>{ticket.priority}</Typography>
+//                         </Box>
+//                       </Box>
+
+//                       {/* Row 2: Subject */}
+//                       <Typography
+//                         sx={{
+//                           fontWeight: 600,
+//                           fontSize: 14.5,
+//                           color: COLORS.textPrimary,
+//                           overflow: "hidden",
+//                           textOverflow: "ellipsis",
+//                           whiteSpace: "nowrap",
+//                           lineHeight: 1.2,
+//                           mb: 0.3,
+//                         }}
+//                       >
+//                         {ticket.subject}
+//                       </Typography>
+
+//                       {/* Row 3: Description */}
+//                       <Typography
+//                         sx={{
+//                           fontSize: 12,
+//                           color: COLORS.textSecondary,
+//                           display: "-webkit-box",
+//                           WebkitLineClamp: 1,
+//                           WebkitBoxOrient: "vertical",
+//                           overflow: "hidden",
+//                         }}
+//                       >
+//                         {ticket.description}
+//                       </Typography>
+
+//                       {/* Row 4: Customer & Date (Mobile/Tablet view helper) */}
+//                       <Typography sx={{ fontSize: 11, color: "#999", mt: 0.5 }}>
+//                         {ticket.date} • {ticket.customer}
+//                       </Typography>
+//                     </Box>
+
+//                     {/* Right: Status Chip (Bottom Corner style) */}
+//                     <Chip
+//                       label={ticket.status}
+//                       size="small"
+//                       sx={{
+//                         position: "absolute",
+//                         right: 16,
+//                         bottom: 12, // Pinned to bottom right
+//                         height: 20,
+//                         fontSize: 10,
+//                         fontWeight: 700,
+//                         bgcolor: statusStyle.bg,
+//                         color: statusStyle.color,
+//                         borderRadius: "6px",
+//                       }}
+//                     />
+
+//                     {/* Right: Chevron (Top aligned) */}
+//                     <ChevronRightRounded
+//                       sx={{
+//                         position: "absolute",
+//                         right: 16,
+//                         top: 16,
+//                         fontSize: 18,
+//                         color: "#cbd5e1",
+//                       }}
+//                     />
+//                   </ListItemButton>
+//                 </React.Fragment>
+//               );
+//             })}
+//           </List>
+//         )}
+//       </EmailScrollArea>
+
+//       {/* 3. Floating Pagination */}
+//       <PremiumFloatingPagination
+//         page={page}
+//         rowsPerPage={rowsPerPage}
+//         count={filteredTickets.length}
+//         onPageChange={(e, newPage) => {
+//           handleScrollToTop();
+//           setPage(newPage);
+//         }}
+//         onRowsPerPageChange={(e) => {
+//           handleScrollToTop();
+//           setRowsPerPage(parseInt(e.target.value, 10));
+//           setPage(0);
+//         }}
+//       />
+
+//       {/* 4. Filter Drawer */}
+//       <TicketFilterDrawer onClose={() => setAnchorElSort(false)} open={anchorElSort} title="Filter Tickets" />
+//     </Box>
+//   );
+// };
+
+// export default TicketsApp;
+
+
+
+// // import React, { useState } from "react";
+// // import { Box, Typography, TextField, InputAdornment, Chip, Card, IconButton, Avatar, AppBar, Toolbar, Badge, AvatarGroup, Menu, MenuItem, ListItemIcon, ListItemText } from "@mui/material";
+// // import {  FilterListRounded, AddRounded, MoreVertRounded,  AccessTimeRounded, TrendingUpRounded, TrendingDownRounded, RemoveRounded } from "@mui/icons-material";
+// // import ScrollArea from "../../ui/ScrollArea";
+// // import { BiMessageDots } from "react-icons/bi";
+// // import FilterAltOffRoundedIcon from "@mui/icons-material/FilterAltOffRounded";
+// // import FilterAltRoundedIcon from "@mui/icons-material/FilterAltRounded";
+// // import TicketFilterDrawer from "./TicketFilterDrawer";
+// // import { CiSearch as SearchRounded } from "react-icons/ci";
+
+// // const TicketListView = () => {
+// //   const [selectedFilter, setSelectedFilter] = useState("All");
+// //   const [openFilterDrawer, setOpenFilterDrawer] = useState(false);
+
+// //   const filters = ["All", "Open", "In Progress", "Pending", "Resolved"];
+
+// //   const tickets = [
+// //     {
+// //       id: "#TK-1248",
+// //       title: "Integration Issues with Payment Gateway",
+// //       description: "Customer experiencing intermittent failures during checkout process",
+// //       status: "In Progress",
+// //       statusColor: "#4facfe",
+// //       priority: "High",
+// //       priorityColor: "#f5576c",
+// //       customer: {
+// //         name: "Maria Garcia",
+// //         company: "Global Industries Ltd",
+// //         avatar: "https://i.pravatar.cc/150?img=45",
+// //       },
+// //       assignedTo: [
+// //         { name: "Sarah Wilson", avatar: "https://i.pravatar.cc/150?img=47" },
+// //         { name: "Mike Chen", avatar: "https://i.pravatar.cc/150?img=33" },
+// //       ],
+// //       dueDate: "Oct 18",
+// //       lastUpdate: "2 hours ago",
+// //       comments: 8,
+// //       attachments: 3,
+// //     },
+// //     {
+// //       id: "#TK-1247",
+// //       title: "Request for Custom Reporting Features",
+// //       description: "Client needs advanced analytics dashboard with custom metrics",
+// //       status: "Open",
+// //       statusColor: "#ffa726",
+// //       priority: "Medium",
+// //       priorityColor: "#ffa726",
+// //       customer: {
+// //         name: "John Smith",
+// //         company: "TechCorp Solutions",
+// //         avatar: "https://i.pravatar.cc/150?img=12",
+// //       },
+// //       assignedTo: [{ name: "Emma Rodriguez", avatar: "https://i.pravatar.cc/150?img=28" }],
+// //       dueDate: "Oct 20",
+// //       lastUpdate: "5 hours ago",
+// //       comments: 4,
+// //       attachments: 1,
+// //     },
+// //     {
+// //       id: "#TK-1246",
+// //       title: "Data Migration Support Request",
+// //       description: "Assistance needed for migrating legacy data to new platform",
+// //       status: "Pending",
+// //       statusColor: "#ffa726",
+// //       priority: "Low",
+// //       priorityColor: "#43e97b",
+// //       customer: {
+// //         name: "Alex Johnson",
+// //         company: "StartUp Ventures",
+// //         avatar: "https://i.pravatar.cc/150?img=56",
+// //       },
+// //       assignedTo: [{ name: "David Park", avatar: "https://i.pravatar.cc/150?img=68" }],
+// //       dueDate: "Oct 22",
+// //       lastUpdate: "1 day ago",
+// //       comments: 12,
+// //       attachments: 5,
+// //     },
+// //     {
+// //       id: "#TK-1245",
+// //       title: "Mobile App Performance Optimization",
+// //       description: "App experiencing slow load times on iOS devices",
+// //       status: "In Progress",
+// //       statusColor: "#4facfe",
+// //       priority: "High",
+// //       priorityColor: "#f5576c",
+// //       customer: {
+// //         name: "Lisa Thompson",
+// //         company: "Enterprise Corp",
+// //         avatar: "https://i.pravatar.cc/150?img=23",
+// //       },
+// //       assignedTo: [
+// //         { name: "Mike Chen", avatar: "https://i.pravatar.cc/150?img=33" },
+// //         { name: "Sarah Wilson", avatar: "https://i.pravatar.cc/150?img=47" },
+// //         { name: "Emma Rodriguez", avatar: "https://i.pravatar.cc/150?img=28" },
+// //       ],
+// //       dueDate: "Oct 17",
+// //       lastUpdate: "30 min ago",
+// //       comments: 15,
+// //       attachments: 7,
+// //     },
+// //     {
+// //       id: "#TK-1244",
+// //       title: "API Documentation Update Required",
+// //       description: "Need to update API docs with new endpoints and examples",
+// //       status: "Resolved",
+// //       statusColor: "#43e97b",
+// //       priority: "Low",
+// //       priorityColor: "#43e97b",
+// //       customer: {
+// //         name: "Robert Davis",
+// //         company: "Digital Solutions Inc",
+// //         avatar: "https://i.pravatar.cc/150?img=51",
+// //       },
+// //       assignedTo: [{ name: "Emma Rodriguez", avatar: "https://i.pravatar.cc/150?img=28" }],
+// //       dueDate: "Oct 15",
+// //       lastUpdate: "2 days ago",
+// //       comments: 6,
+// //       attachments: 2,
+// //     },
+// //   ];
+
+// //   const getPriorityIcon = (priority) => {
+// //     switch (priority) {
+// //       case "High":
+// //         return <TrendingUpRounded sx={{ fontSize: 16 }} />;
+// //       case "Medium":
+// //         return <RemoveRounded sx={{ fontSize: 16 }} />;
+// //       case "Low":
+// //         return <TrendingDownRounded sx={{ fontSize: 16 }} />;
+// //       default:
+// //         return null;
+// //     }
+// //   };
+
+// //   return (
+// //     <>
+// //       {/* App Bar */}
+// //       <AppBar
+// //         position="static"
+// //         elevation={0}
+// //         sx={{
+// //           background: "#ffffff",
+// //           borderBottom: "1px solid rgba(0, 0, 0, 0.08)",
+// //           borderRadius: "0 !important",
+// //         }}
+// //       >
+// //         <Toolbar
+// //           sx={{
+// //             minHeight: { xs: 60, sm: 64 },
+// //             px: { xs: 2, sm: 3 },
+// //             justifyContent: "space-between",
+// //           }}
+// //         >
+// //           <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+// //             <Typography
+// //               sx={{
+// //                 fontSize: { xs: 20, sm: 22 },
+// //                 fontWeight: 700,
+// //                 color: "#1a1a1a",
+// //                 letterSpacing: "-0.02em",
+// //               }}
+// //             >
+// //               Support Tickets
+// //             </Typography>
+// //             <Badge
+// //               badgeContent={tickets.length}
+// //               sx={{
+// //                 "& .MuiBadge-badge": {
+// //                   bgcolor: "#667eea",
+// //                   color: "#fff",
+// //                   fontWeight: 700,
+// //                   fontSize: 11,
+// //                   top: -6,
+// //                   right: 2,
+// //                 },
+// //               }}
+// //             />
+// //           </Box>
+
+// //           <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+// //             <IconButton
+// //               onClick={() => setOpenFilterDrawer(!openFilterDrawer)}
+// //               sx={{
+// //                 width: { xs: 40, sm: 44 },
+// //                 height: { xs: 40, sm: 44 },
+// //                 bgcolor: "rgba(102, 126, 234, 0.1)",
+// //                 "&:active": {
+// //                   transform: "scale(0.95)",
+// //                 },
+// //               }}
+// //             >
+// //               {openFilterDrawer ? <FilterAltOffRoundedIcon sx={{ fontSize: { xs: 20, sm: 22 }, color: "#667eea" }} /> : <FilterAltRoundedIcon sx={{ fontSize: { xs: 20, sm: 22 }, color: "#667eea" }} />}
+// //             </IconButton>
+// //             <IconButton
+// //               sx={{
+// //                 width: { xs: 40, sm: 44 },
+// //                 height: { xs: 40, sm: 44 },
+// //                 background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+// //                 color: "#fff",
+// //                 boxShadow: "0 4px 16px rgba(102, 126, 234, 0.35)",
+// //                 "&:hover": {
+// //                   background: "linear-gradient(135deg, #764ba2 0%, #667eea 100%)",
+// //                 },
+// //                 "&:active": {
+// //                   transform: "scale(0.95)",
+// //                 },
+// //               }}
+// //             >
+// //               <AddRounded sx={{ fontSize: { xs: 22, sm: 24 } }} />
+// //             </IconButton>
+// //           </Box>
+// //         </Toolbar>
+// //       </AppBar>
+// //       {/* Search and Filter Section */}
+// //       <Box
+// //         sx={{
+// //           px: { xs: 2, sm: 3 },
+// //           pt: { xs: 2, sm: 2.5 },
+// //           pb: { xs: 1.5, sm: 2 },
+// //           background: "#ffffff",
+// //           borderBottom: "1px solid rgba(0, 0, 0, 0.06)",
+// //           // borderRadius: "0 0 25px 25px",
+// //           borderRadius:25,
+// //           mt:1
+// //         }}
+// //       >
+// //         {/* <TextField
+// //           fullWidth
+// //           placeholder="Search tickets..."
+// //           variant="outlined"
+// //           InputProps={{
+// //             startAdornment: (
+// //               <InputAdornment position="start">
+// //                 <SearchRounded style={{ color: "#999", fontSize: 22 }} />
+// //               </InputAdornment>
+// //             ),
+// //             endAdornment: (
+// //               <InputAdornment position="end">
+// //                 <IconButton
+// //                   size="small"
+// //                   sx={{
+// //                     bgcolor: "rgba(102, 126, 234, 0.1)",
+// //                     width: 36,
+// //                     height: 36,
+// //                   }}
+// //                 >
+// //                   <FilterListRounded sx={{ fontSize: 18, color: "#667eea" }} />
+// //                 </IconButton>
+// //               </InputAdornment>
+// //             ),
+// //           }}
+// //           sx={{
+// //             "& .MuiOutlinedInput-root": {
+// //               borderRadius: 2.5,
+// //               bgcolor: "#f8f8f8",
+// //               fontSize: { xs: 14, sm: 15 },
+// //               "& fieldset": {
+// //                 borderColor: "transparent",
+// //               },
+// //               "&:hover fieldset": {
+// //                 borderColor: "rgba(102, 126, 234, 0.3)",
+// //               },
+// //               "&.Mui-focused fieldset": {
+// //                 borderColor: "#667eea",
+// //                 borderWidth: 2,
+// //               },
+// //             },
+// //           }}
+// //         /> */}
+
+// //         {/* Filter Chips */}
+// //         <Box
+// //           sx={{
+// //             display: "flex",
+// //             gap: 1,
+// //             // mt: 2,
+// //             overflowX: "auto",
+// //             pb: 0.5,
+// //             "&::-webkit-scrollbar": {
+// //               display: "none",
+// //             },
+// //           }}
+// //         >
+// //           {filters.map((filter) => (
+// //             <Chip
+// //               key={filter}
+// //               label={filter}
+// //               size="small"
+// //               onClick={() => setSelectedFilter(filter)}
+// //               sx={{
+// //                 height: { xs: 36, sm: 38 } ,
+// //                 fontSize: { xs: 13, sm: 14 } ,
+// //                 fontWeight: 600 ,
+// //                 borderRadius: 2 ,
+// //                 px: 0.5 ,
+// //                 minWidth: "fit-content",
+// //                 bgcolor: selectedFilter === filter ? "#667eea" : "rgba(102, 126, 234, 0.08)",
+// //                 color: selectedFilter === filter ? "#fff" : "#667eea",
+// //                 border: "none",
+// //                 transition: "all 0.2s",
+// //                 "&:active": {
+// //                   transform: "scale(0.97)",
+// //                 },
+// //                 "&:hover": {
+// //                   bgcolor: selectedFilter === filter ? "#764ba2" : "rgba(102, 126, 234, 0.12)",
+// //                 },
+// //               }}
+// //             />
+// //           ))}
+// //         </Box>
+// //       </Box>
+
+// //       <ScrollArea>
+// //         {/* Tickets List - Scrollable */}
+// //         <Box
+// //           sx={{
+// //             flex: 1,
+// //             overflowY: "auto",
+// //             overflowX: "hidden",
+// //             WebkitOverflowScrolling: "touch",
+// //           }}
+// //         >
+// //           {tickets.map((ticket, index) => (
+// //             <Card
+// //               key={ticket.id}
+// //               sx={{
+// //                 mb: { xs: 1.5, sm: 2 },
+// //                 borderRadius: { xs: 2.5, sm: 3 },
+// //                 border: "1px solid rgba(0, 0, 0, 0.06)",
+// //                 boxShadow: "0 2px 12px rgba(0, 0, 0, 0.04)",
+// //                 background: "#ffffff",
+// //                 cursor: "pointer",
+// //                 transition: "all 0.2s",
+// //                 "&:active": {
+// //                   transform: "scale(0.98)",
+// //                   boxShadow: "0 1px 6px rgba(0, 0, 0, 0.06)",
+// //                 },
+// //                 "@media (hover: hover)": {
+// //                   "&:hover": {
+// //                     boxShadow: "0 4px 20px rgba(0, 0, 0, 0.08)",
+// //                     borderColor: "rgba(102, 126, 234, 0.2)",
+// //                   },
+// //                 },
+// //               }}
+// //             >
+// //               <Box sx={{ p: { xs: 2, sm: 2.5 } }}>
+// //                 {/* Header Row */}
+// //                 <Box
+// //                   sx={{
+// //                     display: "flex",
+// //                     alignItems: "flex-start",
+// //                     justifyContent: "space-between",
+// //                     mb: 1.5,
+// //                   }}
+// //                 >
+// //                   <Box sx={{ flex: 1, minWidth: 0, mr: 1 }}>
+// //                     <Box
+// //                       sx={{
+// //                         display: "flex",
+// //                         alignItems: "center",
+// //                         gap: 1,
+// //                         mb: 0.5,
+// //                         flexWrap: "wrap",
+// //                       }}
+// //                     >
+// //                       <Typography
+// //                         sx={{
+// //                           fontSize: { xs: 12, sm: 13 },
+// //                           fontWeight: 700,
+// //                           color: "#667eea",
+// //                         }}
+// //                       >
+// //                         {ticket.id}
+// //                       </Typography>
+// //                       <Chip
+// //                         label={ticket.status}
+// //                         size="small"
+// //                         sx={{
+// //                           height: 22,
+// //                           fontSize: 11,
+// //                           fontWeight: 700,
+// //                           bgcolor: ticket.statusColor,
+// //                           color: "#fff",
+// //                           borderRadius: 1.5,
+// //                           "& .MuiChip-label": {
+// //                             px: 1,
+// //                           },
+// //                         }}
+// //                       />
+// //                     </Box>
+// //                     <Typography
+// //                       sx={{
+// //                         fontSize: { xs: 15, sm: 16 },
+// //                         fontWeight: 700,
+// //                         color: "#1a1a1a",
+// //                         mb: 0.5,
+// //                         lineHeight: 1.3,
+// //                       }}
+// //                     >
+// //                       {ticket.title}
+// //                     </Typography>
+// //                     <Typography
+// //                       sx={{
+// //                         fontSize: { xs: 12, sm: 13 },
+// //                         color: "#666",
+// //                         lineHeight: 1.5,
+// //                         display: "-webkit-box",
+// //                         WebkitLineClamp: 2,
+// //                         WebkitBoxOrient: "vertical",
+// //                         overflow: "hidden",
+// //                       }}
+// //                     >
+// //                       {ticket.description}
+// //                     </Typography>
+// //                   </Box>
+
+// //                   <IconButton
+// //                     size="small"
+// //                     sx={{
+// //                       width: 32,
+// //                       height: 32,
+// //                       flexShrink: 0,
+// //                     }}
+// //                   >
+// //                     <MoreVertRounded sx={{ fontSize: 20, color: "#888" }} />
+// //                   </IconButton>
+// //                 </Box>
+
+// //                 {/* Customer Info */}
+// //                 <Box
+// //                   sx={{
+// //                     display: "flex",
+// //                     alignItems: "center",
+// //                     gap: 1.5,
+// //                     mb: 1.5,
+// //                     p: 1.5,
+// //                     bgcolor: "rgba(102, 126, 234, 0.04)",
+// //                     borderRadius: 2,
+// //                   }}
+// //                 >
+// //                   <Avatar
+// //                     src={ticket.customer.avatar}
+// //                     sx={{
+// //                       width: 32,
+// //                       height: 32,
+// //                       border: "2px solid #fff",
+// //                     }}
+// //                   />
+// //                   <Box sx={{ flex: 1, minWidth: 0 }}>
+// //                     <Typography
+// //                       sx={{
+// //                         fontSize: { xs: 12, sm: 13 },
+// //                         fontWeight: 600,
+// //                         color: "#1a1a1a",
+// //                         lineHeight: 1.3,
+// //                         overflow: "hidden",
+// //                         textOverflow: "ellipsis",
+// //                         whiteSpace: "nowrap",
+// //                       }}
+// //                     >
+// //                       {ticket.customer.name}
+// //                     </Typography>
+// //                     <Typography
+// //                       sx={{
+// //                         fontSize: { xs: 11, sm: 12 },
+// //                         color: "#888",
+// //                         lineHeight: 1.3,
+// //                         overflow: "hidden",
+// //                         textOverflow: "ellipsis",
+// //                         whiteSpace: "nowrap",
+// //                       }}
+// //                     >
+// //                       {ticket.customer.company}
+// //                     </Typography>
+// //                   </Box>
+// //                 </Box>
+
+// //                 {/* Footer Info */}
+// //                 <Box
+// //                   sx={{
+// //                     display: "flex",
+// //                     alignItems: "center",
+// //                     justifyContent: "space-between",
+// //                     flexWrap: "wrap",
+// //                     gap: 1.5,
+// //                   }}
+// //                 >
+// //                   <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+// //                     {/* Priority Badge */}
+// //                     <Chip
+// //                       icon={getPriorityIcon(ticket.priority)}
+// //                       label={ticket.priority}
+// //                       size="small"
+// //                       sx={{
+// //                         height: 24,
+// //                         fontSize: 11,
+// //                         fontWeight: 700,
+// //                         bgcolor: `${ticket.priorityColor}15`,
+// //                         color: ticket.priorityColor,
+// //                         borderRadius: 1.5,
+// //                         "& .MuiChip-icon": {
+// //                           color: ticket.priorityColor,
+// //                           ml: 0.5,
+// //                         },
+// //                         "& .MuiChip-label": {
+// //                           px: 1,
+// //                         },
+// //                       }}
+// //                     />
+
+// //                     {/* Assigned To */}
+// //                     <AvatarGroup
+// //                       max={3}
+// //                       sx={{
+// //                         "& .MuiAvatar-root": {
+// //                           width: 24,
+// //                           height: 24,
+// //                           fontSize: 11,
+// //                           border: "2px solid #fff",
+// //                         },
+// //                       }}
+// //                     >
+// //                       {ticket.assignedTo.map((person, idx) => (
+// //                         <Avatar key={idx} src={person.avatar} alt={person.name} />
+// //                       ))}
+// //                     </AvatarGroup>
+// //                   </Box>
+
+// //                   <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+// //                     {/* Stats */}
+// //                     <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+// //                       <Typography
+// //                         sx={{
+// //                           fontSize: { xs: 11, sm: 12 },
+// //                           color: "#888",
+// //                           fontWeight: 600,
+// //                         }}
+// //                       >
+// //                         <BiMessageDots /> {ticket.comments}
+// //                       </Typography>
+// //                       <Typography
+// //                         sx={{
+// //                           fontSize: { xs: 11, sm: 12 },
+// //                           color: "#888",
+// //                           fontWeight: 600,
+// //                         }}
+// //                       >
+// //                         📎 {ticket.attachments}
+// //                       </Typography>
+// //                     </Box>
+
+// //                     {/* Due Date */}
+// //                     <Chip
+// //                       icon={<AccessTimeRounded sx={{ fontSize: 14 }} />}
+// //                       label={ticket.dueDate}
+// //                       size="small"
+// //                       sx={{
+// //                         height: 24,
+// //                         fontSize: 11,
+// //                         fontWeight: 600,
+// //                         bgcolor: "rgba(0, 0, 0, 0.04)",
+// //                         color: "#666",
+// //                         borderRadius: 1.5,
+// //                         "& .MuiChip-icon": {
+// //                           color: "#888",
+// //                           ml: 0.5,
+// //                         },
+// //                         "& .MuiChip-label": {
+// //                           px: 1,
+// //                         },
+// //                       }}
+// //                     />
+// //                   </Box>
+// //                 </Box>
+
+// //                 {/* Last Update */}
+// //                 <Typography
+// //                   sx={{
+// //                     fontSize: { xs: 10, sm: 11 },
+// //                     color: "#aaa",
+// //                     mt: 1,
+// //                     fontWeight: 500,
+// //                   }}
+// //                 >
+// //                   Last updated {ticket.lastUpdate}
+// //                 </Typography>
+// //               </Box>
+// //             </Card>
+// //           ))}
+
+// //           {/* Bottom Spacing */}
+// //           <Box sx={{ height: 2 }} />
+// //         </Box>
+// //       </ScrollArea>
+// //       <TicketFilterDrawer open={openFilterDrawer} onClose={() => setOpenFilterDrawer(false)} />
+// //     </>
+// //   );
+// // };
+
+// // export default TicketListView;

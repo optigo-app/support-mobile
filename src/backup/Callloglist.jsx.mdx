@@ -1,0 +1,559 @@
+import React, { useState, useMemo, useRef } from "react";
+import {
+  Box,
+  Typography,
+  Avatar,
+  Chip,
+  ListItemButton,
+  List,
+  Divider
+} from "@mui/material";
+import {
+  CallMissedRounded,
+  CallReceivedRounded,
+  CallMadeRounded,
+  PhoneCallbackRounded
+} from "@mui/icons-material";
+
+// --- Assumed Imports (Same as your reference) ---
+import { EmailScrollArea } from "../../ui/ScrollArea";
+import TicketFilterDrawer from "../Tickets/TicketFilterDrawer";
+import PremiumFloatingPagination from "../../ui/PremiumFloatingPagination";
+import GmailStyleHeader from "./Header"; // Adjust path if needed
+import CallLogDetailPage from "./Details"; // Adjust path if needed
+
+// --- 1. CONSTANTS & UTILS ---
+const COLORS = {
+  textPrimary: "#1A1A1A",
+  textSecondary: "#777777",
+  // Status Colors
+  missedBg: "rgba(220, 38, 38, 0.08)",
+  missedText: "#dc2626",
+  incomingBg: "rgba(74, 102, 255, 0.08)",
+  incomingText: "#4A66FF",
+  outgoingBg: "rgba(58, 248, 126, 0.08)",
+  outgoingText: "#059669",
+  neutralBg: "rgba(0, 0, 0, 0.06)",
+  neutralText: "#555",
+};
+
+function getAvatarGradient(name) {
+  const gradients = [
+    "linear-gradient(135deg, #FF9966 0%, #FF5E62 100%)",
+    "linear-gradient(135deg, #56CCF2 0%, #2F80ED 100%)",
+    "linear-gradient(135deg, #11998e 0%, #38ef7d 100%)",
+    "linear-gradient(135deg, #8E2DE2 0%, #4A00E0 100%)",
+    "linear-gradient(135deg, #f093fb 0%, #f5576c 100%)"
+  ];
+  const index = name ? name.length % gradients.length : 0;
+  return gradients[index];
+}
+
+function getStatusStyle(status) {
+  const normalized = status?.toLowerCase() || "";
+  if (normalized === "missed") {
+    return { bg: COLORS.missedBg, color: COLORS.missedText, icon: <CallMissedRounded sx={{ fontSize: 12 }} /> };
+  } else if (normalized === "incoming") {
+    return { bg: COLORS.incomingBg, color: COLORS.incomingText, icon: <CallReceivedRounded sx={{ fontSize: 12 }} /> };
+  } else if (normalized === "outgoing") {
+    return { bg: COLORS.outgoingBg, color: COLORS.outgoingText, icon: <CallMadeRounded sx={{ fontSize: 12 }} /> };
+  }
+  return { bg: COLORS.neutralBg, color: COLORS.neutralText, icon: <PhoneCallbackRounded sx={{ fontSize: 12 }} /> };
+}
+
+// --- 2. MOCK DATA ---
+const generateMockData = () => {
+  const companies = ["TechFlow", "MediCare", "LogiStick", "FinCorp", "EduLearn"];
+  const callers = ["Mira Patel", "Rushi Patel", "Diaa", "Khushi", "Admin"];
+
+  return Array.from({ length: 25 }).map((_, i) => {
+    const isMissed = Math.random() < 0.2;
+    return {
+      sr: i,
+      company: companies[i % companies.length],
+      callBy: callers[i % callers.length],
+      appName: "Sales CRM",
+      description: isMissed 
+        ? "Caller hung up before connection." 
+        : `Discussion regarding policy update #${100 + i}`,
+      date: `2${i % 9}/11/2025`,
+      time: `${10 + (i % 12)}:${10 + (i % 49)} ${i % 2 === 0 ? 'AM' : 'PM'}`,
+      externalStatus: isMissed ? "Missed" : i % 2 === 0 ? "Incoming" : "Outgoing",
+      rating: isMissed ? 0 : 4,
+      attendBy: "Admin",
+    };
+  });
+};
+
+const callLogsList = generateMockData();
+
+// --- 3. COMPONENT ---
+const CallLogsApp = () => {
+  const [searchQuery, setSearchQuery] = useState("");
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(20);
+  const [anchorElSort, setAnchorElSort] = useState(false);
+  
+  // Detail Drawer States
+  const [open, setOpen] = useState(false);
+  const [selectedLog, setSelectedLog] = useState(null);
+  
+  const scrollRef = useRef(null);
+
+  // Filter Logic
+  const filteredLogs = useMemo(() => {
+    return callLogsList.filter((log) => {
+      const displayTitle = log.company;
+      return displayTitle.toLowerCase().includes(searchQuery.toLowerCase()) || 
+             log.callBy.toLowerCase().includes(searchQuery.toLowerCase());
+    });
+  }, [searchQuery]);
+
+  const paginatedLogs = useMemo(() => {
+    return filteredLogs.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
+  }, [filteredLogs, page, rowsPerPage]);
+
+  const Scroller = () => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  };
+
+  const handleChangePage = (event, newPage) => {
+    Scroller();
+    setPage(newPage);
+  };
+
+  const handleChangeRowsPerPage = (event) => {
+    Scroller();
+    setRowsPerPage(parseInt(event.target.value, 10));
+    setPage(0);
+  };
+
+  const handleOpenDrawer = (log) => {
+    setSelectedLog(log);
+    setOpen(true);
+  };
+
+  const handleCloseDrawer = () => {
+    setOpen(false);
+    setSelectedLog(null);
+  };
+
+  return (
+    <Box sx={{ display: "flex", flexDirection: "column", overflow: "hidden", bgcolor: "#fff", height: "100%" }}>
+      
+      {/* HEADER */}
+      <GmailStyleHeader 
+        anchorElSort={anchorElSort} 
+        setAnchorElSort={setAnchorElSort} 
+        searchQuery={searchQuery} 
+        setSearchQuery={setSearchQuery} // Pass string updater if needed, or event handler
+        onSearch={(e) => setSearchQuery(e.target.value)}
+        title="Call Logs" 
+      />
+
+      {/* SCROLL AREA */}
+      <EmailScrollArea ref={scrollRef}>
+        {paginatedLogs.length === 0 ? (
+          <Box sx={{ p: 5, textAlign: "center", color: COLORS.textSecondary }}>
+            <Typography variant="body2">No logs found</Typography>
+          </Box>
+        ) : (
+          <List disablePadding>
+            {paginatedLogs.map((log) => {
+              // --- MAPPING LOGIC (Matching Reference) ---
+              const statusStyle = getStatusStyle(log.externalStatus);
+              const displayTitle = log.company;
+              
+              return (
+                <React.Fragment key={log.sr}>
+                  <ListItemButton
+                    onClick={() => handleOpenDrawer(log)}
+                    sx={{
+                      py: 1.2, // Reference padding
+                      px: 2,
+                      display: "flex",
+                      alignItems: "flex-start",
+                      gap: 2,
+                      borderBottom: "1px solid rgba(0,0,0,0.04)",
+                      transition: "0.2s",
+                      bgcolor: "#fff",
+                      "&:hover": {
+                        bgcolor: "rgba(0,0,0,0.02)",
+                      },
+                    }}
+                  >
+                    {/* 1. LEFT SIDE: Avatar */}
+                    <Avatar
+                      sx={{
+                        width: 40,
+                        height: 40,
+                        borderRadius: "50%",
+                        fontWeight: 700,
+                        fontSize: "1rem",
+                        background: getAvatarGradient(displayTitle),
+                        color: "#fff",
+                        mt: 0.5,
+                      }}
+                    >
+                      {displayTitle ? displayTitle.charAt(0).toUpperCase() : "C"}
+                    </Avatar>
+
+                    {/* 2. RIGHT SIDE: Main Content */}
+                    <Box sx={{ flex: 1, minWidth: 0 }}>
+                      
+                      {/* Row 1: Title & Time */}
+                      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 0.3 }}>
+                        <Typography
+                          sx={{
+                            fontWeight: 700,
+                            fontSize: "0.9rem",
+                            color: COLORS.textPrimary,
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          {displayTitle}
+                        </Typography>
+
+                        {/* Time aligned to right */}
+                        <Typography sx={{ fontSize: "0.75rem", color: COLORS.textSecondary, whiteSpace: "nowrap", ml: 1 }}>
+                          {log.time}
+                        </Typography>
+                      </Box>
+
+                      {/* Row 2: Status + Description Snippet */}
+                      <Box sx={{ display: "flex", alignItems: "center", gap: 1, flexWrap: "nowrap" }}>
+                        
+                        {/* Status Chip */}
+                        <Chip
+                          label={log.externalStatus}
+                          size="small"
+                          icon={statusStyle.icon}
+                          sx={{
+                            height: 18,
+                            fontSize: "0.65rem",
+                            fontWeight: 700,
+                            bgcolor: statusStyle.bg,
+                            color: statusStyle.color,
+                            borderRadius: "4px",
+                            px: 0.5,
+                            "& .MuiChip-label": { padding: "0 4px" },
+                            "& .MuiChip-icon": { color: "inherit", fontSize: "0.9rem", ml: -0.5 }
+                          }}
+                        />
+
+                        {/* Description Line */}
+                        <Typography
+                          sx={{
+                            fontSize: "0.8rem",
+                            color: COLORS.textSecondary,
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            whiteSpace: "nowrap",
+                            flex: 1,
+                          }}
+                        >
+                          <span style={{ color: "#ccc", marginRight: "6px" }}>|</span>
+                          <span style={{ fontWeight: 500, color: "#555" }}>{log.callBy}</span>
+                          <span style={{ margin: "0 4px" }}>-</span>
+                          {log.description}
+                        </Typography>
+                      </Box>
+
+                    </Box>
+                  </ListItemButton>
+                </React.Fragment>
+              );
+            })}
+          </List>
+        )}
+      </EmailScrollArea>
+
+      {/* FOOTER & OVERLAYS */}
+      <PremiumFloatingPagination 
+        page={page} 
+        rowsPerPage={rowsPerPage} 
+        count={filteredLogs.length} 
+        onPageChange={handleChangePage} 
+        onRowsPerPageChange={handleChangeRowsPerPage} 
+      />
+
+      <TicketFilterDrawer 
+        onClose={() => setAnchorElSort(false)} 
+        open={anchorElSort} 
+        title="Filter Logs" 
+      />
+
+      {/* Passing the specific log data here */}
+      <CallLogDetailPage 
+        open={open} 
+        onClose={handleCloseDrawer} 
+        onBack={handleCloseDrawer} 
+        logData={selectedLog} 
+      />
+    </Box>
+  );
+};
+
+export default CallLogsApp;
+
+
+
+// import React, { useState, useMemo } from "react";
+// import { Box, Typography, TextField, InputAdornment, IconButton, AppBar, Toolbar, Badge, useTheme, createTheme, ThemeProvider, CssBaseline, Avatar, Chip, Tooltip, TablePagination, Paper, ListItemButton, ListItemAvatar, ListItemText, List, Divider, Menu, MenuItem, Tabs, Tab, useMediaQuery, Fade } from "@mui/material";
+// import ScrollArea, { EmailScrollArea } from "../../ui/ScrollArea";
+// import { ChevronRightRounded } from "@mui/icons-material";
+// import TicketFilterDrawer from "../Tickets/TicketFilterDrawer";
+// import PremiumFloatingPagination from "../../ui/PremiumFloatingPagination";
+// import GmailStyleHeader from "./Header";
+// import CallLogDetailPage from "./Details";
+
+// const generateMockData = () => {
+//   const types = ["Success", "Pending", "Missed"];
+//   const companies = ["TechFlow", "MediCare", "LogiStick", "FinCorp", "EduLearn"];
+
+//   return Array.from({ length: 25 }).map((_, i) => {
+//     const type = types[Math.floor(Math.random() * types.length)];
+//     return {
+//       sr: i,
+//       company: companies[Math.floor(Math.random() * companies.length)] + " Solutions",
+//       description: type === "Missed" ? "Tried to contact regarding order #123" : "Discussed Q4 roadmap and deliverables Discussed Q4 roadmap and deliverablesDiscussed Q4 roadmap and deliverablesDiscussed Q4 roadmap and deliverables",
+//       date: "Nov 25, 2025",
+//       time: `${Math.floor(Math.random() * 12) + 1}:${Math.floor(Math.random() * 59)
+//         .toString()
+//         .padStart(2, "0")} PM`,
+//       externalStatus: type,
+//       duration: type === "Missed" ? "0s" : `${Math.floor(Math.random() * 10) + 1}m 30s`,
+//       caller: `User ${i + 1}`,
+//     };
+//   });
+// };
+
+// const callLogsList = generateMockData();
+
+// // --- 2. COLOR PALETTE CONSTANTS (From your request) ---
+// const COLORS = {
+//   primaryGradient: "linear-gradient(135deg, #4A66FF 0%, #1D42FF 100%)",
+//   blueGradient: "linear-gradient(135deg, #4c5fff 0%, #263bff 100%)",
+//   redGradient: "linear-gradient(135deg, #ff7a3d 0%, #ff5e62 50%, #d72638 100%)",
+//   greenGradient: "linear-gradient(135deg, #3af87e 0%, #1ecf63 45%, #0f8c3a 100%)",
+//   tealGradient: "linear-gradient(135deg, #00c6bb 0%, #009f9c 40%, #006d74 100%)",
+//   textPrimary: "#1A1A1A",
+//   textSecondary: "#777777",
+//   border: "rgba(0, 0, 0, 0.08)",
+//   bgLight: "#F8F9FC",
+// };
+
+// // --- 4. MAIN COMPONENT ---
+// const CallLogsApp = () => {
+//   const [filterTab, setFilterTab] = useState(0);
+//   const [searchQuery, setSearchQuery] = useState("");
+//   const [page, setPage] = useState(0);
+//   const [rowsPerPage, setRowsPerPage] = useState(10);
+//   const [anchorElSort, setAnchorElSort] = useState(false);
+//   const scrollRef = React.useRef(null);
+//   const [isDetailOpen, setIsDetailOpen] = useState(false);
+
+//   // -- Derived Data Logic --
+//   const filteredLogs = useMemo(() => {
+//     return callLogsList.filter((log) => {
+//       // Text Search
+//       const matchesSearch = log.company.toLowerCase().includes(searchQuery.toLowerCase()) || log.description.toLowerCase().includes(searchQuery.toLowerCase());
+
+//       // Tab Filter
+//       let matchesFilter = true;
+//       if (filterTab === 1) matchesFilter = log.externalStatus === "Missed";
+//       if (filterTab === 2) matchesFilter = log.externalStatus === "Incoming";
+//       if (filterTab === 3) matchesFilter = log.externalStatus === "Pending";
+
+//       return matchesSearch && matchesFilter;
+//     });
+//   }, [searchQuery, filterTab]);
+
+//   // Pagination Logic
+//   const paginatedLogs = useMemo(() => {
+//     return filteredLogs.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
+//   }, [filteredLogs, page, rowsPerPage]);
+
+//   const Scroller = () => {
+//     setTimeout(() => {
+//       if (scrollRef.current) {
+//         scrollRef.current.scrollTo({
+//           top: 0,
+//           behavior: "smooth",
+//         });
+//       }
+//     }, 10);
+//   };
+
+//   // -- Handlers --
+//   const handleChangePage = (event, newPage) => {
+//     Scroller();
+//     setPage(newPage);
+//   };
+//   const handleChangeRowsPerPage = (event) => {
+//     Scroller();
+//     setRowsPerPage(parseInt(event.target.value, 10));
+//     setPage(0);
+//   };
+
+//   function getAvatarGradient(name) {
+//     const gradients = ["linear-gradient(135deg, #5A6FF2 0%, #3C4FDB 100%)", "linear-gradient(135deg, #4FB1F2 0%, #3588D8 100%)", "linear-gradient(135deg, #4CBFA6 0%, #349E88 100%)", "linear-gradient(135deg, #F2A65A 0%, #D97A28 100%)", "linear-gradient(135deg, #F26B72 0%, #D94A55 100%)", "linear-gradient(135deg, #A381F2 0%, #7C5BD9 100%)", "linear-gradient(135deg, #58C172 0%, #34A252 100%)"];
+
+//     const index = name ? name.length % gradients.length : 0;
+//     return gradients[index];
+//   }
+
+//   return (
+//     <>
+//       {/* FULL HEIGHT CONTAINER */}
+//       <Box
+//         sx={{
+//           display: "flex",
+//           flexDirection: "column",
+//           overflow: "hidden",
+//           bgcolor: "#f0f2f5",
+//         }}
+//       >
+//         <GmailStyleHeader anchorElSort={anchorElSort} setAnchorElSort={setAnchorElSort} title={"Search Call Logs"} />
+//         <EmailScrollArea ref={scrollRef}>
+//           {paginatedLogs.length === 0 ? (
+//             <Box sx={{ p: 5, textAlign: "center", color: COLORS.textSecondary }}>
+//               <Typography variant="h6">No logs found</Typography>
+//               <Typography variant="body2">Try adjusting filters</Typography>
+//             </Box>
+//           ) : (
+//             <List disablePadding>
+//               {paginatedLogs.map((log) => {
+//                 const isMissed = log.externalStatus === "Missed";
+
+//                 return (
+//                   <React.Fragment key={log.sr}>
+//                     <ListItemButton
+//                       onClick={() => setIsDetailOpen(true)}
+//                       sx={{
+//                         py: 1.5,
+//                         px: 1.7,
+//                         display: "flex",
+//                         alignItems: "center",
+//                         gap: 1.6,
+//                         position: "relative",
+//                         transition: "0.25s",
+//                         borderBottom: "1px solid rgba(0,0,0,0.06)", // <-- ADD THIS
+//                         "&:hover": {
+//                           bgcolor: "rgba(74,102,255,0.03)",
+//                           "& .hover-actions": { opacity: 1 },
+//                         },
+//                       }}
+//                     >
+//                       <Avatar
+//                         sx={{
+//                           width: 40,
+//                           height: 40,
+//                           borderRadius: "50%",
+//                           fontWeight: 700,
+//                           fontSize: 15,
+//                           background: getAvatarGradient(log.company),
+//                           color: "#fff",
+//                           boxShadow: "0 3px 10px rgba(0,0,0,0.12)",
+//                           textTransform: "uppercase",
+//                         }}
+//                       >
+//                         {log.company.charAt(0)}
+//                       </Avatar>
+
+//                       {/* Main Content */}
+//                       <Box sx={{ flex: 1, minWidth: 0 }}>
+//                         {/* Top Row: Title */}
+//                         <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+//                           <Typography
+//                             sx={{
+//                               fontWeight: 600,
+//                               fontSize: 14,
+//                               color: COLORS.textPrimary,
+//                               overflow: "hidden",
+//                               textOverflow: "ellipsis",
+//                               whiteSpace: "nowrap",
+//                               pr: 1,
+//                             }}
+//                           >
+//                             {log.company}
+//                           </Typography>
+
+//                           {/* Chevron */}
+//                           <ChevronRightRounded sx={{ fontSize: 20, color: "#ccc" }} />
+//                         </Box>
+
+//                         {/* Description - Full width */}
+//                         <Typography
+//                           sx={{
+//                             fontSize: 11.5,
+//                             color: COLORS.textSecondary,
+//                             mt: 0.3,
+//                             lineHeight: 1.35,
+//                             display: "-webkit-box",
+//                             WebkitLineClamp: 2,
+//                             WebkitBoxOrient: "vertical",
+//                             overflow: "hidden",
+//                           }}
+//                         >
+//                           {log.description}
+//                         </Typography>
+
+//                         {/* Bottom Metadata Row */}
+//                         <Box
+//                           sx={{
+//                             display: "flex",
+//                             justifyContent: "space-between",
+//                             mt: 0.5,
+//                             alignItems: "center",
+//                           }}
+//                         >
+//                           {/* Left meta */}
+//                           <Typography sx={{ fontSize: 11, color: "#999" }}>
+//                             {log.date} · {log.duration}
+//                           </Typography>
+//                         </Box>
+//                       </Box>
+//                       <Chip
+//                         label={log.externalStatus}
+//                         size="small"
+//                         sx={{
+//                           position: "absolute",
+//                           right: 12,
+//                           bottom: 10,
+//                           height: 16,
+//                           fontSize: 10,
+//                           fontWeight: 700,
+//                           bgcolor: log.externalStatus === "Missed" ? "#FFEBEE" : "rgba(74,102,255,0.08)",
+//                           color: log.externalStatus === "Missed" ? "#D32F2F" : "#4A66FF",
+//                           borderRadius: 1,
+//                           px: 0.2,
+//                           textTransform: "capitalize",
+//                         }}
+//                       />
+//                     </ListItemButton>
+
+//                     {/* Clean Divider */}
+//                     <Divider sx={{ ml: 75, borderColor: "rgba(0,0,0,0.04)" }} />
+//                   </React.Fragment>
+//                 );
+//               })}
+//             </List>
+//           )}
+//         </EmailScrollArea>
+
+//         <PremiumFloatingPagination page={page} rowsPerPage={rowsPerPage} count={filteredLogs.length} onPageChange={handleChangePage} onRowsPerPageChange={handleChangeRowsPerPage} />
+
+//         <TicketFilterDrawer onClose={() => setAnchorElSort(false)} open={anchorElSort} title="Filter Calllog" />
+
+//         <CallLogDetailPage open={isDetailOpen} onClose={() => setIsDetailOpen(false)} onBack={() => setIsDetailOpen(false)} />
+//       </Box>
+//     </>
+//   );
+// };
+
+// export default CallLogsApp;
