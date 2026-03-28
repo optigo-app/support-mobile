@@ -8,7 +8,7 @@ import CallLogDetailPage from "./Details";
 import { CALL_LOG_FILTER_DEFINITIONS } from "../../../utils/FiltersOptions";
 import { useDynamicFilters } from "../../../hooks/useDynamicFilters";
 import { useCallLog } from "../../../contexts/UseCallLog";
-import { formatToISTAmPm, todayDate, yesterdayDate, thisMonthStart, thisMonthEnd, thisWeekStart, thisWeekEnd } from "../../../utils/dateFormatter";
+import { formatToISTAmPm, todayDate, yesterdayDate, thisMonthStart, thisMonthEnd, thisWeekStart, thisWeekEnd, formatRobustDate } from "../../../utils/dateFormatter";
 import { getStatusColor, COLORS } from "../../../utils/Filtering";
 import { FullPageRating } from "../../ui/RatingModal";
 import EmptyLogsState from "../../ui/Fallback";
@@ -146,13 +146,19 @@ const CallLogsApp = () => {
   return (
     <Box sx={{ display: "flex", flexDirection: "column", overflow: "hidden", bgcolor: "#fff", height: "100%" }}>
       {/* 5. Pass controlled props to Header */}
-      <GmailStyleHeader FilteringOptions={options}
+      <GmailStyleHeader
+        FilteringOptions={options}
         onFilterChange={handleHeaderFilterChange}
         activeFilter={activeFilterLabel}
         searchQuery={searchQuery}
         onSearch={(e) => setSearchQuery(e.target.value)}
-        anchorElSort={anchorElSort} setAnchorElSort={setAnchorElSort}
-        title="Call Logs" />
+        anchorElSort={anchorElSort}
+        setAnchorElSort={setAnchorElSort}
+        title="Call Logs"
+        count={visibleLogs?.length}
+        onRefresh={refreshCallLogs}
+        isRefreshing={isFetching}
+      />
 
       <NewUpdatePopup
         Title={'Call'}
@@ -165,6 +171,8 @@ const CallLogsApp = () => {
           <List disablePadding>
             {visibleLogs?.map((log) => {
               const typeStyle = CALL_TYPE_STYLES[log?.topicRaisedBy] || CALL_TYPE_STYLES?.client;
+              const formatted = formatRobustDate(log?.date);
+
               return (
                 <ListItemButton
                   key={log.sr}
@@ -185,7 +193,7 @@ const CallLogsApp = () => {
                   <Box sx={{ flex: 1, minWidth: 0, overflow: "hidden" }}>
                     <Box sx={{ display: "flex", justifyContent: "space-between", mb: 0.2 }}>
                       <Typography sx={{ fontWeight: 600, fontSize: "0.95rem", color: COLORS?.subtitle, noWrap: true }}>{log?.description || "No Description"}</Typography>
-                      <Typography sx={{ fontSize: "0.75rem", color: COLORS?.textSecondary }}>{formatToISTAmPm(log?.time)}</Typography>
+                      <Typography sx={{ fontSize: "0.75rem", color: COLORS?.textSecondary }}>{formatted?.smart}</Typography>
                     </Box>
                     <Typography sx={{ fontSize: "0.80rem", color: COLORS?.textSecondary, display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical", overflow: "hidden", mb: 0.5 }}>{log?.appname || "No AppName"}</Typography>
                     <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.8, alignItems: "center" }}>

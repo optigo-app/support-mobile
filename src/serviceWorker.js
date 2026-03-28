@@ -16,8 +16,8 @@ function safePublicUrl() {
 }
 
 export function register(config = {}) {
-  if (!("serviceWorker" in navigator)) return;
-  if (process.env.NODE_ENV !== "production") return;
+  // Note: We've enabled this for development to support the Active Greeting Service
+  // if (process.env.NODE_ENV !== "production") return;
 
   const publicUrl = safePublicUrl();
   // Removed: CRA's origin blocking (breaks tunnels)

@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useRef } from "react";
+import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from "react";
 import TrainingAPI from "../apis/TrainingController";
 import { useAuth } from "../contexts/AuthContext";
 
@@ -72,6 +72,16 @@ export const TrainingProvider = ({ children }) => {
         setHasMore(true);
         setFilters((prev) => ({ ...prev, ...updates }));
     };
+
+    const refreshTrainingData = useCallback(() => {
+        window.scrollTo({
+            top: 0,
+            behavior: 'smooth'
+        })
+        setTraininglist([]);
+        setPage(1);
+        setHasMore(true);
+    }, []);
 
 
     useEffect(() => {
@@ -162,7 +172,8 @@ export const TrainingProvider = ({ children }) => {
         hasMore,
         filters,
         updateFilters,
-        isFetching, // This is now reliable
+        isFetching,
+        refreshTrainingData,
     };
 
     return <TrainingContext.Provider value={value}>{children}</TrainingContext.Provider>;

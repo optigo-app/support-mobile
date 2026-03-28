@@ -415,8 +415,7 @@ export const TicketProvider = ({ children }) => {
         filters,
         updateFilters,
         isFetching,
-        hasNewUpdate,
-        refreshCallLogs: ResetFilters,
+        refreshTickets: ResetFilters,
         setHasNewUpdate
       }}
     >

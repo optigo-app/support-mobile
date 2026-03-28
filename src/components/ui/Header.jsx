@@ -1,6 +1,7 @@
 import React from "react";
 import { AppBar, Box, IconButton, InputBase, Chip, Paper, Stack } from "@mui/material";
 import { FiSearch } from "react-icons/fi";
+import { MdCached } from "react-icons/md";
 
 const COLORS = {
   textPrimary: "#1A1A1A",
@@ -9,15 +10,18 @@ const COLORS = {
   border: "rgba(0, 0, 0, 0.08)",
 };
 
-const GmailStyleHeader = ({ 
-  FilteringOptions, 
-  onSearch, 
-  onFilterChange, 
-  searchQuery, 
+const GmailStyleHeader = ({
+  FilteringOptions,
+  onSearch,
+  onFilterChange,
+  searchQuery,
   title,
-  activeFilter 
+  activeFilter,
+  count,
+  onRefresh,
+  isRefreshing
 }) => {
-  
+
   return (
     <AppBar
       position="sticky"
@@ -30,16 +34,16 @@ const GmailStyleHeader = ({
         zIndex: 1100,
         borderRadius: 0,
         borderTop: "none !important",
-    /* Remove shadows (AppBar / Paper / Drawer) */
-  boxShadow: "none !important",
+        /* Remove shadows (AppBar / Paper / Drawer) */
+        boxShadow: "none !important",
 
-  /* Remove MUI elevation & pseudo dividers */
-  "&::before": {
-    display: "none !important",
-  },
-  "&::after": {
-    display: "none !important",
-  },
+        /* Remove MUI elevation & pseudo dividers */
+        "&::before": {
+          display: "none !important",
+        },
+        "&::after": {
+          display: "none !important",
+        },
       }}
     >
       {/* Search Bar Section */}
@@ -60,13 +64,34 @@ const GmailStyleHeader = ({
           <IconButton type="button" sx={{ p: "8px", color: COLORS.textSecondary }} aria-label="search">
             <FiSearch size={20} />
           </IconButton>
-          <InputBase 
-            sx={{ ml: 0, flex: 1, fontWeight: 500 }} 
-            placeholder={`Search ${title}`} 
-            inputProps={{ "aria-label": `search ${title}` }} 
-            onChange={onSearch} 
+          <InputBase
+            sx={{ ml: 0, flex: 1, fontWeight: 500 }}
+            placeholder={`Search ${title}`}
+            inputProps={{ "aria-label": `search ${title}` }}
+            onChange={onSearch}
             value={searchQuery}
           />
+          {onRefresh && (
+            <IconButton
+              onClick={onRefresh}
+              disabled={isRefreshing}
+              size="small"
+              sx={{
+                p: "8px",
+                color: COLORS.textSecondary,
+                transition: "transform 0.3s ease",
+                ...(isRefreshing && {
+                  animation: "spin 1s linear infinite",
+                  "@keyframes spin": {
+                    "0%": { transform: "rotate(0deg)" },
+                    "100%": { transform: "rotate(360deg)" },
+                  },
+                }),
+              }}
+            >
+              <MdCached size={20} />
+            </IconButton>
+          )}
         </Paper>
       </Box>
 
@@ -84,11 +109,11 @@ const GmailStyleHeader = ({
         <Stack direction="row" spacing={1}>
           {FilteringOptions?.map((option) => {
             const isSelected = activeFilter === option.label;
-            
+
             return (
               <Box position="relative" key={option.label}>
                 <Chip
-                  label={option.label}
+                  label={isSelected && count !== undefined && count !== null ? `${option.label} (${count})` : option.label}
                   clickable
                   onClick={() => onFilterChange(option)} // Pass the whole object back
                   sx={{

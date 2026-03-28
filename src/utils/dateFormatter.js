@@ -34,7 +34,19 @@ export const formatRobustDate = (dateString) => {
     };
   }
 
-  const date = dayjs(dateString);
+  // 1. Robust Parsing
+  let date = dayjs(dateString);
+  
+  // If invalid and string, try to fix common issue where local time has Z
+  if (!date.isValid() && typeof dateString === "string") {
+    date = dayjs(dateString.replace(/Z$/, ""));
+  }
+  
+  // Try parsing as number if it looks like one
+  if (!date.isValid() && !isNaN(Number(dateString))) {
+    date = dayjs(Number(dateString));
+  }
+
   if (!date.isValid()) {
     return {
       raw: null,
@@ -84,17 +96,17 @@ export const formatRobustDate = (dateString) => {
 
     /**
      * Smart Label (Great for Lists/Call Logs)
-     * Logic:
-     * - If Today -> Show Time ("5:16 PM")
+     * Logic updated to "just day" as per user request:
+     * - If Today -> Show "Today"
      * - If Yesterday -> Show "Yesterday"
-     * - If This Year -> Show Date ("03 Dec")
-     * - If Older -> Show Full Date ("03 Dec 2024")
+     * - If This Year -> Show Date ("3 Dec")
+     * - If Older -> Show Full Date ("3 Dec 2024")
      */
     smart: (() => {
-      if (date.isToday()) return date.format("h:mm A");
+      if (date.isToday()) return "Today";
       if (date.isYesterday()) return "Yesterday";
-      if (date.isSame(dayjs(), 'year')) return date.format("D MMM"); // 03 Dec
-      return date.format("DD/MM/YYYY"); // 03/12/2025
+      if (date.isSame(dayjs(), 'year')) return date.format("D MMM"); // 3 Dec
+      return date.format("D MMM YYYY"); // 3 Dec 2024
     })(),
     
     // Database format (for sending back to API)
@@ -292,6 +304,14 @@ const thisMonthEnd = (() => {
 
 const thisWeekStart = dayjs().startOf('week').format('YYYY-MM-DD');
 const thisWeekEnd = dayjs().endOf('week').format('YYYY-MM-DD');
+
+export const getGreeting = () => {
+  const hour = dayjs().hour();
+  if (hour < 12) return "Good Morning";
+  if (hour < 17) return "Good Afternoon";
+  if (hour < 21) return "Good Evening";
+  return "Good Night";
+};
 
 export {
   todayDate,

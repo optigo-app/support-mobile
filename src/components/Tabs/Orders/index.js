@@ -49,7 +49,7 @@ function getStatusStyle(status) {
 }
 
 const OrderDashboardApp = () => {
-  const { deliveryData, loadMore, hasMore, isFetching, updateFilters, filters ,AddFeedBack } = useDelivery();
+  const { deliveryData, loadMore, hasMore, isFetching, updateFilters, filters, AddFeedBack, refreshDeliveryData } = useDelivery();
   const { filterDefinitions, selectedFilters, totalFilters, toggleFilter, clearAllFilters } = useDynamicFilters(ORDER_FILTER_DEFINITIONS);
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -229,7 +229,11 @@ const OrderDashboardApp = () => {
           setAnchorElSort={setAnchorElSort}
           searchQuery={searchQuery}
           onSearch={(e) => setSearchQuery(e.target.value)}
-          title="Search Orders" />
+          title="Search Orders"
+          count={visibleLogs?.length}
+          onRefresh={refreshDeliveryData}
+          isRefreshing={isFetching}
+        />
 
         <EmailScrollArea ref={scrollRef}>
           {visibleLogs?.length === 0 && !isFetching ? (

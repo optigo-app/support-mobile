@@ -188,19 +188,33 @@ export function CallLogProvider(props) {
     [user]
   );
 
+  console.log(user, "call")
+
   useSocketEvent("AddCall", (data) => {
-    if (data?.company !== user?.companycode) return;
-    setHasNewUpdate(true);
+    console.log(data, "data")
+    if (data?.company === user?.company) {
+      setHasNewUpdate(true);
+    } else {
+      return;
+    }
   });
 
   useSocketEvent("AcceptCall", (data) => {
-    if (data?.company !== user?.companycode) return;
-    setHasNewUpdate(true);
+    console.log(data, "data")
+    if (data?.company === user?.company) {
+      setHasNewUpdate(true);
+    } else {
+      return;
+    }
   });
 
   useSocketEvent("ForwardedCall", (data) => {
-    if (data?.company !== user?.companycode) return;
-    setHasNewUpdate(true);
+    console.log(data, "data")
+    if (data?.company === user?.company) {
+      setHasNewUpdate(true);
+    } else {
+      return;
+    }
   });
 
 
