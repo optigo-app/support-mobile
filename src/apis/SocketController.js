@@ -8,7 +8,7 @@ class SocketService {
   init() {
     if (this.socket) return this.socket;
 
-    this.socket = io(process.env.NODE_ENV === "production" ? "https://apilx.optigoapps.com" : "http://192.168.1.71:3001", {
+    this.socket = io(process.env.NODE_ENV === "production" ? "https://apilx.optigoapps.com" : "http://newnextjs.web", {
       path: "/socket.io",
       transports: ["polling", "websocket"], // allow fallback handshake
       reconnection: true,

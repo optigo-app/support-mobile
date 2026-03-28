@@ -366,74 +366,100 @@ const TicketDetailView = ({ open, onClose, onCloseTicketOpen, onCloseRatingOpen,
                         </Box>
                       )}
                       <Box>
-                        {Comments?.map((activity, idx) => (
-                          <Box
-                            key={activity.id}
-                            sx={{
-                              display: "flex",
-                              gap: 1.5,
-                              mb: idx < Comments?.length - 1 ? 2.5 : 0,
-                            }}
-                          >
-                            <Avatar
+                        {Comments?.map((activity, idx) => {
+                          const { attachments } = ValidateAttachment(activity) || { attachments: [] };
+                          const hasMessage = activity?.message && activity.message !== "null" && activity.message.trim() !== "";
+                          const hasAttachments = attachments && attachments.length > 0;
+
+                          // Only show if there's a message OR attachments
+                          if (!hasMessage && !hasAttachments) return null;
+
+                          return (
+                            <Box
+                              key={activity.id}
                               sx={{
-                                width: { xs: 36, sm: 40 },
-                                height: { xs: 36, sm: 40 },
-                                textTransform: "uppercase",
+                                display: "flex",
+                                gap: 1.5,
+                                mb: idx < Comments?.length - 1 ? 2.5 : 0,
                               }}
                             >
-                              {activity?.Name?.charAt(0)}
-                            </Avatar>
-                            <Box sx={{ flex: 1 }}>
-                              <Box
+                              <Avatar
                                 sx={{
-                                  display: "flex",
-                                  alignItems: "center",
-                                  gap: 1,
-                                  mb: 0.5,
-                                  flexWrap: "wrap",
+                                  width: { xs: 36, sm: 40 },
+                                  height: { xs: 36, sm: 40 },
+                                  textTransform: "uppercase",
                                 }}
                               >
-                                <Typography
+                                {activity?.Name?.charAt(0)}
+                              </Avatar>
+                              <Box sx={{ flex: 1, minWidth: 0 }}>
+                                <Box
                                   sx={{
-                                    fontSize: { xs: 13, sm: 14 },
-                                    fontWeight: 600,
-                                    color: "#1a1a1a",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    gap: 1,
+                                    mb: 0.5,
+                                    flexWrap: "wrap",
                                   }}
                                 >
-                                  {activity?.Name}
-                                </Typography>
-                                <Typography
+                                  <Typography
+                                    sx={{
+                                      fontSize: { xs: 13, sm: 14 },
+                                      fontWeight: 600,
+                                      color: "#1a1a1a",
+                                    }}
+                                  >
+                                    {activity?.Name}
+                                  </Typography>
+                                  <Typography
+                                    sx={{
+                                      fontSize: { xs: 11, sm: 12 },
+                                      color: "#aaa",
+                                      ml: "auto",
+                                    }}
+                                  >
+                                    {formatCommentDate(activity?.time)}
+                                  </Typography>
+                                </Box>
+                                <Box
                                   sx={{
-                                    fontSize: { xs: 11, sm: 12 },
-                                    color: "#aaa",
-                                    ml: "auto",
+                                    bgcolor: "#f8f8f8",
+                                    p: 1.5,
+                                    borderRadius: 2,
+                                    border: "1px solid rgba(0, 0, 0, 0.06)",
                                   }}
                                 >
-                                  {formatCommentDate(activity?.time)}
-                                </Typography>
-                              </Box>
-                              <Box
-                                sx={{
-                                  bgcolor: "#f8f8f8",
-                                  p: 1.5,
-                                  borderRadius: 2,
-                                  border: "1px solid rgba(0, 0, 0, 0.06)",
-                                }}
-                              >
-                                <Typography
-                                  sx={{
-                                    fontSize: { xs: 12, sm: 13 },
-                                    color: "#666",
-                                    lineHeight: 1.5,
-                                  }}
-                                >
-                                  {activity?.message}
-                                </Typography>
+                                  {hasMessage ? (
+                                    <Typography
+                                      sx={{
+                                        fontSize: { xs: 12, sm: 13 },
+                                        color: "#666",
+                                        lineHeight: 1.5,
+                                        wordBreak: "break-word",
+                                      }}
+                                    >
+                                      {activity?.message}
+                                    </Typography>
+                                  ) : (
+                                    <Typography
+                                      sx={{
+                                        fontSize: { xs: 12, sm: 13 },
+                                        color: "#888",
+                                        fontStyle: "italic",
+                                        display: "flex",
+                                        alignItems: "center",
+                                        gap: 0.8,
+                                      }}
+                                    >
+                                      <FilePresentRoundedIcon sx={{ fontSize: 16 }} />
+                                      Sent an attachment
+                                    </Typography>
+                                  )}
+                                </Box>
                               </Box>
                             </Box>
-                          </Box>
-                        ))}
+                          );
+                        })}
                       </Box>
                     </>
                   )}

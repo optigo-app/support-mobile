@@ -22,7 +22,7 @@ const TicketListApp = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const { tickets, loadMore, hasMore, filters, updateFilters, isFetching, selectedTicket, setSelectedTicket, CloseTicket, AddFeedBackTicket,
     hasNewUpdate,
-    refreshCallLogs,
+    refreshTickets,
     setHasNewUpdate
   } = useTicket();
 
@@ -160,13 +160,25 @@ const TicketListApp = () => {
     <>
       <Box sx={{ display: "flex", flexDirection: "column", overflow: "hidden", bgcolor: "#fff", height: "100%" }}>
         {/* HEADER */}
-        <GmailStyleHeader FilteringOptions={options} onFilterChange={handleHeaderFilterChange} activeFilter={activeFilterLabel} searchQuery={searchQuery} onSearch={(e) => setSearchQuery(e.target.value)} anchorElSort={anchorElSort} setAnchorElSort={setAnchorElSort} title="Tickets" />
+        <GmailStyleHeader
+          count={visibleLogs?.length}
+          FilteringOptions={options}
+          onFilterChange={handleHeaderFilterChange}
+          activeFilter={activeFilterLabel}
+          searchQuery={searchQuery}
+          onSearch={(e) => setSearchQuery(e.target.value)}
+          anchorElSort={anchorElSort}
+          setAnchorElSort={setAnchorElSort}
+          title="Tickets"
+          onRefresh={refreshTickets}
+          isRefreshing={isFetching}
+        />
 
         {/* SCROLL AREA */}
         <EmailScrollArea ref={scrollRef}>
           <NewUpdatePopup
             Title={'Ticket'}
-            hasNewUpdate={hasNewUpdate} refreshCallLogs={refreshCallLogs} setHasNewUpdate={setHasNewUpdate}
+            hasNewUpdate={hasNewUpdate} refreshCallLogs={refreshTickets} setHasNewUpdate={setHasNewUpdate}
           />
           {visibleLogs?.length === 0 && !isFetching ? (
             <Box sx={{ p: 5, textAlign: "center", color: COLORS.textSecondary }}>
@@ -289,7 +301,7 @@ const TicketListApp = () => {
                             textOverflow: "ellipsis",
                           }}
                         >
-                          {data[0]?.message || "No Description"}
+                          {(data[0]?.message && data[0]?.message !== "null" && data[0]?.message?.trim() !== "") ? data[0]?.message : "No Description"}
                         </Typography>
 
                         <Box sx={{ mt: 0.6, display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%" }}>

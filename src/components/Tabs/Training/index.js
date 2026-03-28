@@ -57,7 +57,7 @@ const TrainingLogsApp = () => {
   const scrollRef = useRef(null);
   const isFirstRender = useRef(true);
 
-  const { AddFeedBack, Traininglist, loadMore, hasMore, filters, updateFilters, isFetching } = useTraining();
+  const { AddFeedBack, Traininglist, loadMore, hasMore, filters, updateFilters, isFetching, refreshTrainingData } = useTraining();
 
   const options = useMemo(
     () => [
@@ -204,7 +204,19 @@ const TrainingLogsApp = () => {
 
   return (
     <Box sx={{ display: "flex", flexDirection: "column", overflow: "hidden", bgcolor: "#f0f2f5", height: "100%" }}>
-      <GmailStyleHeader FilteringOptions={options} onFilterChange={handleHeaderFilterChange} activeFilter={activeFilterLabel} anchorElSort={anchorElSort} setAnchorElSort={setAnchorElSort} searchQuery={searchQuery} onSearch={(e) => setSearchQuery(e.target.value)} title="My Training" />
+      <GmailStyleHeader
+        FilteringOptions={options}
+        onFilterChange={handleHeaderFilterChange}
+        activeFilter={activeFilterLabel}
+        anchorElSort={anchorElSort}
+        setAnchorElSort={setAnchorElSort}
+        searchQuery={searchQuery}
+        onSearch={(e) => setSearchQuery(e.target.value)}
+        title="My Training"
+        count={visibleLogs?.length}
+        onRefresh={refreshTrainingData}
+        isRefreshing={isFetching}
+      />
 
       <EmailScrollArea ref={scrollRef}>
         {visibleLogs?.length === 0 && !isFetching ? (

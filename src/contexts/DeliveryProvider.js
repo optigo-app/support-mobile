@@ -60,6 +60,16 @@ export const DeliveryProvider = ({ children }) => {
     setHasMore(true);
     setFilters((prev) => ({ ...prev, ...updates }));
   };
+ 
+  const refreshDeliveryData = useCallback(() => {
+    window.scrollTo({
+      top: 0,
+      behavior: 'smooth'
+    })
+    setDeliveryData([]);
+    setPage(1);
+    setHasMore(true);
+  }, []);
 
   useEffect(() => {
     const GetMasterData = async () => {
@@ -159,7 +169,8 @@ export const DeliveryProvider = ({ children }) => {
     hasMore,
     filters,
     updateFilters,
-    isFetching, // This is now reliable
+    isFetching,
+    refreshDeliveryData,
   };
 
   return <DeliveryContext.Provider value={props}>{children}</DeliveryContext.Provider>;

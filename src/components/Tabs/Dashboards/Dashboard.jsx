@@ -11,6 +11,7 @@ import PromotionCarousel from "./PromotionCarousel";
 import Hello from "./Hello";
 import { useAuth } from "../../../contexts/AuthContext";
 import { useDashboard } from "../../../contexts/DashboardProvider";
+import { useGreeting } from "../../../hooks/useGreeting";
 import DashboardSkeleton from "./DashboardSkeleton";
 
 const initials = (user) => {
@@ -26,6 +27,7 @@ const Dashboard = () => {
   const { setTabId } = useCommonStore();
   const { user } = useAuth();
   const { DashboardAnalytics, loading } = useDashboard();
+  const greeting = useGreeting();
 
   const statsCards = [
     {
@@ -141,10 +143,9 @@ const Dashboard = () => {
                   sx={{
                     fontSize: { xs: 13, sm: 14 },
                     color: "#777",
-                    fontWeight: 500,
                   }}
                 >
-                  Good Morning
+                  {greeting}
                 </Typography>
 
                 <Typography

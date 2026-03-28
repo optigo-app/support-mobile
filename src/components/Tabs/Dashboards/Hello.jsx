@@ -20,7 +20,6 @@ const Hello = () => {
           flexDirection: "column",
           alignItems: "center",
           justifyContent: "center",
-          height: "30vh",
           mt: 8,
         }}
       >
@@ -69,22 +68,18 @@ const Hello = () => {
         </Stack>
       </Box>
 
-      {/* BOTTOM FLOATING DECORATION IMAGE */}
       <Box
         sx={{
-          bottom: "-90px",
           left: 0,
           right: 0,
           display: "flex",
           justifyContent: "center",
           pb: 1,
-          position: "absolute",
         }}
       >
         <Box component={"img"}
-          //  src={Assets.illustrations.onlineWorld}
           src={Assets.Banner.banner5}
-          width="400px" height="400px" sx={{ objectFit: "contain", opacity: 0.95, paddingBottom: '10rem' }} />
+          width="400px" height="400px" sx={{ objectFit: "contain", opacity: 0.95, }} />
       </Box>
     </Box>
   );
