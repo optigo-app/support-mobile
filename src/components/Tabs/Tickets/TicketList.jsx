@@ -16,6 +16,7 @@ import { todayDate, yesterdayDate, thisMonthStart, thisMonthEnd, thisWeekStart, 
 import { DataParser } from "../../../utils/ticketUtils";
 import { COLORS } from "../../../utils/Filtering";
 import NewUpdatePopup from "../../ui/NewUpdatePopover";
+import Loader from "../../ui/Loader";
 
 const TicketListApp = () => {
   const { filterDefinitions, selectedFilters, totalFilters, toggleFilter, clearAllFilters } = useDynamicFilters(TICKET_FILTER_DEFINITIONS);
@@ -172,6 +173,7 @@ const TicketListApp = () => {
           title="Tickets"
           onRefresh={refreshTickets}
           isRefreshing={isFetching}
+          onClearSearch={() => setSearchQuery("")}
         />
 
         {/* SCROLL AREA */}
@@ -180,12 +182,15 @@ const TicketListApp = () => {
             Title={'Ticket'}
             hasNewUpdate={hasNewUpdate} refreshCallLogs={refreshTickets} setHasNewUpdate={setHasNewUpdate}
           />
-          {visibleLogs?.length === 0 && !isFetching ? (
+          {isFetching && visibleLogs?.length === 0 ? (
+            <Loader />
+          ) : visibleLogs?.length === 0 && !isFetching ? (
             <Box sx={{ p: 5, textAlign: "center", color: COLORS.textSecondary }}>
               <Typography variant="body2">No tickets found</Typography>
             </Box>
           ) : (
             <List disablePadding>
+
               {visibleLogs?.map((row) => {
                 const statusStyle = getStatusStyle(row?.Status);
                 const formatted = formatRobustDate(row?.CreatedOn);

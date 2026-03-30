@@ -49,9 +49,10 @@ const getCurrentDateTime = () => {
   hours = hours % 12 || 12; // Handle 0 as 12
 
   return {
-    date: `${year}-${month}-${day}`,
+    date: `${day}-${month}-${year}`,
     time: `${hours.toString().padStart(2, "0")} : ${minutes} ${ampm}`,
   };
+
 };
 
 // --- Memoized Child Components (Prevents unneeded re-renders) ---

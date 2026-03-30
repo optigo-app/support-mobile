@@ -64,8 +64,12 @@ export default function AddTaskFormDrawer({ open, onClose }) {
   const handleSubmit = useCallback(async () => {
     setloading(true);
     try {
+      // Reformat date for API: dd-mm-yyyy to yyyy-mm-dd
+      const [day, month, year] = (formState.currentDate || "").split("-");
+      const formattedDate = `${year}-${month}-${day}`;
+
       const payload = {
-        date: formState.currentDate,
+        date: formattedDate,
         time: formState.currentTime,
         companyName: formState.companyNameValue,
         customerName: formState.customerName,

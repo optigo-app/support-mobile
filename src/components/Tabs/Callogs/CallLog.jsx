@@ -13,6 +13,7 @@ import { getStatusColor, COLORS } from "../../../utils/Filtering";
 import { FullPageRating } from "../../ui/RatingModal";
 import EmptyLogsState from "../../ui/Fallback";
 import NewUpdatePopup from '../../ui/NewUpdatePopover'
+import Loader from "../../ui/Loader";
 
 const CALL_TYPE_STYLES = {
   "": { bg: "#EFF6FF", color: "#3B82F6", icon: <CallReceivedRounded /> },
@@ -158,6 +159,7 @@ const CallLogsApp = () => {
         count={visibleLogs?.length}
         onRefresh={refreshCallLogs}
         isRefreshing={isFetching}
+        onClearSearch={() => setSearchQuery("")}
       />
 
       <NewUpdatePopup
@@ -165,10 +167,13 @@ const CallLogsApp = () => {
         hasNewUpdate={hasNewUpdate} refreshCallLogs={refreshCallLogs} setHasNewUpdate={setHasNewUpdate}
       />
       <EmailScrollArea ref={scrollRef}>
-        {visibleLogs?.length === 0 && !isFetching ? (
+        {isFetching && visibleLogs?.length === 0 ? (
+          <Loader />
+        ) : visibleLogs?.length === 0 && !isFetching ? (
           <EmptyLogsState />
         ) : (
           <List disablePadding>
+
             {visibleLogs?.map((log) => {
               const typeStyle = CALL_TYPE_STYLES[log?.topicRaisedBy] || CALL_TYPE_STYLES?.client;
               const formatted = formatRobustDate(log?.date);

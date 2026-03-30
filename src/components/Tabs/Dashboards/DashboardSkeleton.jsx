@@ -21,14 +21,16 @@ const GlassCard = ({ children, sx = {}, ...props }) => (
   </Card>
 );
 
-const DashboardSkeleton = () => {
+const DashboardSkeleton = ({ hideHeader = false }) => {
   // Common spacing matches your original file
   const pagePadding = { xs: 1.5, sm: 3, md: 4 };
 
   return (
     <Box sx={{ width: "100%", height: "100%", pb: 4, bgcolor: "#fff" }}>
       {/* 1. Header Section (Avatar + Search) */}
-      <Box sx={{ px: pagePadding, pt: { xs: 2.5, sm: 3 } }}>
+      {!hideHeader && (
+        <Box sx={{ px: pagePadding, pt: { xs: 2.5, sm: 3 } }}>
+
         <Box
           sx={{
             display: "flex",
@@ -73,7 +75,8 @@ const DashboardSkeleton = () => {
             sx={{ bgcolor: "rgba(0,0,0,0.04)" }}
           />
         </Box>
-      </Box>
+        </Box>
+      )}
 
       {/* 2. Promotion Carousel Placeholder */}
       <Box sx={{ px: 0, mb: 3 }}>

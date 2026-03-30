@@ -10,6 +10,7 @@ import { useDelivery } from "../../../contexts/DeliveryProvider";
 import { formatRobustDate, todayDate, yesterdayDate, thisMonthStart, thisMonthEnd, thisWeekStart, thisWeekEnd } from "../../../utils/dateFormatter";
 import OrderDetailPage from "./detail";
 import { FullPageRating } from "../../ui/RatingModal";
+import Loader from "../../ui/Loader";
 
 const COLORS = {
   textPrimary: "#1A1A1A",
@@ -233,16 +234,20 @@ const OrderDashboardApp = () => {
           count={visibleLogs?.length}
           onRefresh={refreshDeliveryData}
           isRefreshing={isFetching}
+          onClearSearch={() => setSearchQuery("")}
         />
 
         <EmailScrollArea ref={scrollRef}>
-          {visibleLogs?.length === 0 && !isFetching ? (
+          {isFetching && visibleLogs?.length === 0 ? (
+            <Loader />
+          ) : visibleLogs?.length === 0 && !isFetching ? (
             <Box sx={{ p: 5, textAlign: "center", color: COLORS.textSecondary }}>
               <Typography variant="h6">No orders found</Typography>
               <Typography variant="body2">Clear search or adjust filters</Typography>
             </Box>
           ) : (
             <List disablePadding>
+
               {visibleLogs?.map((order, i) => {
                 const statusStyle = getStatusStyle(order?.status);
                 const date = formatRobustDate(order?.Date);

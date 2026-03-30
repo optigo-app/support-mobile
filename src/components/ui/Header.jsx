@@ -1,7 +1,7 @@
 import React from "react";
-import { AppBar, Box, IconButton, InputBase, Chip, Paper, Stack } from "@mui/material";
+import { AppBar, Box, IconButton, InputBase, Chip, Paper, Stack, InputAdornment } from "@mui/material";
 import { FiSearch } from "react-icons/fi";
-import { MdCached } from "react-icons/md";
+import { MdCached, MdClose as ClearRounded } from "react-icons/md";
 
 const COLORS = {
   textPrimary: "#1A1A1A",
@@ -19,7 +19,8 @@ const GmailStyleHeader = ({
   activeFilter,
   count,
   onRefresh,
-  isRefreshing
+  isRefreshing,
+  onClearSearch
 }) => {
 
   return (
@@ -61,15 +62,30 @@ const GmailStyleHeader = ({
           }}
           onSubmit={(e) => e.preventDefault()}
         >
-          <IconButton type="button" sx={{ p: "8px", color: COLORS.textSecondary }} aria-label="search">
-            <FiSearch size={20} />
-          </IconButton>
           <InputBase
             sx={{ ml: 0, flex: 1, fontWeight: 500 }}
             placeholder={`Search ${title}`}
             inputProps={{ "aria-label": `search ${title}` }}
             onChange={onSearch}
             value={searchQuery}
+            startAdornment={
+              <InputAdornment position="start">
+                <FiSearch size={20} style={{ color: COLORS.textSecondary }} />
+              </InputAdornment>
+            }
+            endAdornment={
+              searchQuery ? (
+                <InputAdornment position="end">
+                  <IconButton
+                    size="small"
+                    onClick={onClearSearch}
+                    sx={{ color: COLORS.textSecondary, p: 0.5, mr: 0.5 }}
+                  >
+                    <ClearRounded size={20} />
+                  </IconButton>
+                </InputAdornment>
+              ) : null
+            }
           />
           {onRefresh && (
             <IconButton
