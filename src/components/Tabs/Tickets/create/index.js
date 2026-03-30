@@ -27,6 +27,7 @@ export default function CreateTicketDrawer({ open, onClose }) {
   const [message, setMessage] = useState("");
   const [attachments, setAttachments] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [showErrors, setShowErrors] = useState(false);
 
   // Reset form for "Add New"
   const resetForm = () => {
@@ -34,6 +35,7 @@ export default function CreateTicketDrawer({ open, onClose }) {
     setSubject("");
     setMessage("");
     setAttachments([]);
+    setShowErrors(false);
     setUniqueId(uuidv4()); // Generate new ID for next ticket
   };
 
@@ -94,6 +96,15 @@ export default function CreateTicketDrawer({ open, onClose }) {
   };
 
   const handleSubmit = async (addNew) => {
+    const isSubjectValid = subject.trim() !== "";
+    const isMessageValid = message.trim() !== "";
+    const isCategoryValid = category !== null;
+
+    if (!isSubjectValid || !isMessageValid || !isCategoryValid) {
+      setShowErrors(true);
+      return;
+    }
+
     setLoading(true);
     try {
       let attachmentUrls = "";
@@ -172,8 +183,21 @@ export default function CreateTicketDrawer({ open, onClose }) {
       {/* FORM CONTENT */}
       <EmailScrollArea>
         <Box sx={{ p: isMobile ? 2 : 4 }}>
-          <CustomInput label="Subject" placeholder="E.g. Login issue" value={subject} onChange={(e) => setSubject(e.target.value)} />
-          <CustomInput label="Message" placeholder="Describe issue..." multiline value={message} onChange={(e) => setMessage(e.target.value)} />
+          <CustomInput
+            label="Subject"
+            placeholder="E.g. Login issue"
+            value={subject}
+            onChange={(e) => setSubject(e.target.value)}
+            error={showErrors && subject.trim() === ""}
+          />
+          <CustomInput
+            label="Message"
+            placeholder="Describe issue..."
+            multiline
+            value={message}
+            onChange={(e) => setMessage(e.target.value)}
+            error={showErrors && message.trim() === ""}
+          />
 
           {/* Attachments */}
           <Box mb={4}>
@@ -215,13 +239,27 @@ export default function CreateTicketDrawer({ open, onClose }) {
           </Box>
 
           {/* Category */}
-          <Box>
-            <FormLabel sx={labelStyle}>
+          <Box
+            sx={{
+              p: showErrors && category === null ? 1.5 : 0,
+              borderRadius: "16px",
+              border: showErrors && category === null ? `1px solid ${colors.danger}` : "none",
+              bgcolor: showErrors && category === null ? `${colors.danger}05` : "transparent",
+            }}
+          >
+            <FormLabel sx={{ ...labelStyle, color: showErrors && category === null ? colors.danger : labelStyle.color }}>
               Category <span style={{ color: colors.danger }}>*</span>
             </FormLabel>
             <Stack direction="row" sx={{ mt: 2, flexWrap: "wrap", gap: 1 }}>
               {CATEGORY_LIST?.map((cat) => (
-                <CategoryChip key={cat?.value} label={cat?.label} selected={category === cat?.value} onClick={() => setCategory(cat?.value)} />
+                <CategoryChip
+                  key={cat?.value}
+                  label={cat?.label}
+                  selected={category === cat?.value}
+                  onClick={() => {
+                    setCategory(cat?.value);
+                  }}
+                />
               ))}
             </Stack>
           </Box>

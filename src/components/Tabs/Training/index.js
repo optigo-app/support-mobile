@@ -9,8 +9,9 @@ import TrainingDetailsDrawer from "./details";
 import { TRAINING_FILTER_DEFINITIONS } from "../../../utils/FiltersOptions";
 import { useDynamicFilters } from "../../../hooks/useDynamicFilters";
 import { useTraining } from "../../../contexts/TrainingProvider";
-import { todayDate, yesterdayDate, thisMonthStart, thisMonthEnd, thisWeekStart, thisWeekEnd, formatRobustDate } from "../../../utils/dateFormatter";
+import { formatRobustDate, todayDate, yesterdayDate, thisMonthStart, thisMonthEnd, thisWeekStart, thisWeekEnd } from "../../../utils/dateFormatter";
 import { FullPageRating } from "./../../ui/RatingModal";
+import Loader from "../../ui/Loader";
 
 const COLORS = {
   successBg: "rgba(58, 248, 126, 0.08)",
@@ -216,15 +217,19 @@ const TrainingLogsApp = () => {
         count={visibleLogs?.length}
         onRefresh={refreshTrainingData}
         isRefreshing={isFetching}
+        onClearSearch={() => setSearchQuery("")}
       />
 
       <EmailScrollArea ref={scrollRef}>
-        {visibleLogs?.length === 0 && !isFetching ? (
+        {isFetching && visibleLogs?.length === 0 ? (
+          <Loader />
+        ) : visibleLogs?.length === 0 && !isFetching ? (
           <Box sx={{ p: 5, textAlign: "center", color: COLORS.textSecondary }}>
             <Typography variant="body2">No training records found</Typography>
           </Box>
         ) : (
           <List disablePadding>
+
             {visibleLogs?.map((log) => {
               const statusStyle = getStatusStyle(log?.Status);
               const formatted = formatRobustDate(log?.EntryDate);

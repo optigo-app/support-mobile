@@ -10,6 +10,7 @@ import { CancelRounded } from "@mui/icons-material";
 import { Box, Typography, Stack, Button } from "@mui/material";
 
 const PUBLIC_ROUTES = ["/privacy-policy", "/steps-account-delete", "/support"];
+const AUTH_STORAGE_KEY = "SUPPORT_AUTH_DATA";
 
 
 const AuthContext = createContext(null);
@@ -29,26 +30,74 @@ const SERVICE_CONFIG = {
 export const AuthProvider = ({ children }) => {
   const [searchParams] = useSearchParams();
   const Navigate = useNavigate();
-  const [auth, setAuth] = useState({ user: null, token: null });
-  const [services, setServices] = useState(DEFAULT_SERVICES);
-  const [isInitialized, setIsInitialized] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const { setTabId } = useCommonStore();
-  const sv = searchParams.get("SV");
-  const token = searchParams.get("token");
   const location = useLocation();
+  const { setTabId } = useCommonStore();
+
+  const querySv = searchParams.get("SV");
+  const queryToken = searchParams.get("token");
+
+  // --- Persistent Storage Logic ---
+  const storedAuth = useMemo(() => {
+    try {
+      const data = localStorage.getItem(AUTH_STORAGE_KEY);
+      return data ? JSON.parse(data) : null;
+    } catch {
+      return null;
+    }
+  }, []);
+
+  const [auth, setAuth] = useState(
+    storedAuth ? { user: storedAuth.user, token: storedAuth.token } : { user: null, token: null }
+  );
+
+  const [services, setServices] = useState(() => {
+    if (storedAuth?.raw) {
+      // Initialize services synchronously for "lightning fast" boot
+      const ok = storedAuth.raw;
+      try {
+        BaseAPI.initialize({
+          YEAR_CODE: ok?.rd[0]?.yc,
+          SV: ok?.rd[0]?.sv,
+          SP: SERVICE_CONFIG.TICKET.SP,
+          APP_USER_ID: ok?.rd2[0]?.userid,
+          VERSION_NO: SERVICE_CONFIG.TICKET.VERSION_NO,
+        }, SERVICE_CONFIG.TICKET.SERVICE_NAME);
+
+        BaseAPI.initialize({
+          YEAR_CODE: ok?.rd[0]?.yc,
+          SV: ok?.rd[0]?.sv,
+          SP: SERVICE_CONFIG.CALL_LOG.SP,
+          APP_USER_ID: ok?.rd2[0]?.userid,
+          VERSION_NO: SERVICE_CONFIG.CALL_LOG.VERSION_NO,
+        }, SERVICE_CONFIG.CALL_LOG.SERVICE_NAME);
+
+        TrainingAPI.initialize(ok);
+        DeliveryAPI.initialize(ok);
+
+        return { ticket: true, callLog: true, training: true, orders: true };
+      } catch {
+        return DEFAULT_SERVICES;
+      }
+    }
+    return DEFAULT_SERVICES;
+  });
+
+  const [isInitialized, setIsInitialized] = useState(!!storedAuth);
+  const [loading, setLoading] = useState(!storedAuth);
 
   useEffect(() => {
     if (PUBLIC_ROUTES.includes(location.pathname)) return;
 
-    if (!auth.user && process.env.NODE_ENV === "development") {
+    // Only redirect if we have neither URL info nor stored info
+    if (!auth.user && !queryToken && process.env.NODE_ENV === "development") {
       Navigate(`/?SV=0&token=QZ7KX8Z23ZT7MLQY`);
     }
-  }, []);
+  }, [auth.user, queryToken, location.pathname, Navigate]);
 
   const clearState = useCallback(() => {
     setAuth({ user: null, token: null });
     setServices(DEFAULT_SERVICES);
+    localStorage.removeItem(AUTH_STORAGE_KEY);
   }, []);
 
   const initializeService = (service, credentials) => {
@@ -81,8 +130,18 @@ export const AuthProvider = ({ children }) => {
           ukey: res?.rd[0]?.ukey,
           metadata: [res?.rd1?.[0]],
         };
-        window.__AUTH__USER = { ...user, token: res?.rd?.[0] }
+        window.__AUTH__USER = { ...user, token: res?.rd?.[0] };
         setAuth({ user, token: res?.rd?.[0] });
+
+        // Save to Persistent Storage
+        localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify({
+          user,
+          token: res?.rd?.[0], // Session token used for calls
+          inputToken: tk,       // Authorization token from URL/Original source
+          raw: res
+        }));
+
+
         return res;
       } else {
         throw new Error("Invalid token response");
@@ -114,8 +173,26 @@ export const AuthProvider = ({ children }) => {
 
   useEffect(() => {
     const init = async () => {
+      // If we have a token in URL, check if it's different from the token used to create the stored session
+      const hasNewUrlToken = queryToken && queryToken !== storedAuth?.inputToken;
+
+      // If we're already initialized from storage and URL doesn't have a NEW token, we're done
+      if (isInitialized && auth.user && !hasNewUrlToken) {
+        setLoading(false);
+        return;
+      }
+
+
       try {
-        const ok = await fetchToken(token, sv);
+        const activeToken = queryToken || auth.token;
+        const activeSv = querySv || storedAuth?.raw?.rd[0]?.sv || "0";
+
+        if (!activeToken) {
+          clearState();
+          return;
+        }
+
+        const ok = await fetchToken(activeToken, activeSv);
         if (!ok) {
           clearState();
           return;
@@ -134,7 +211,7 @@ export const AuthProvider = ({ children }) => {
         });
       } catch (e) {
         console.error("Auth init error:", e);
-        clearState();
+        if (!auth.user) clearState(); // Don't wipe session if it was just an update failure
       } finally {
         setIsInitialized(true);
         setLoading(false);
@@ -142,7 +219,7 @@ export const AuthProvider = ({ children }) => {
     };
 
     init();
-  }, [clearState, sv, token]);
+  }, [queryToken, querySv]);
 
   const value = useMemo(
     () => ({
@@ -160,7 +237,7 @@ export const AuthProvider = ({ children }) => {
   if (!isInitialized || loading) return <Loader />;
 
   if (!auth.user && !PUBLIC_ROUTES?.includes(location.pathname)) {
-    return <UnauthorizedScreen />;
+    return <></>;
   }
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

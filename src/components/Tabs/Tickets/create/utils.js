@@ -39,18 +39,24 @@ const labelStyle = {
 // --- 2. SUB-COMPONENTS ---
 
 // Text Field Wrapper
-const CustomInput = ({ label, placeholder, multiline, value, onChange, autoFocus }) => (
+const CustomInput = ({ label, placeholder, multiline, value, onChange, autoFocus, error }) => (
   <Box sx={{ mb: 3 }}>
-    <FormLabel sx={labelStyle}>
+    <FormLabel sx={{ ...labelStyle, color: error ? colors.danger : labelStyle.color }}>
       {label} <span style={{ color: colors.danger }}>*</span>
     </FormLabel>
     <Box
       sx={{
         ...inputContainerStyle,
+        borderColor: error ? colors.danger : colors.border,
         alignItems: multiline ? "flex-start" : "center",
         minHeight: multiline ? 120 : "auto",
+        "&:focus-within": {
+          borderColor: error ? colors.danger : colors.primary,
+          boxShadow: error ? `0 0 0 4px ${colors.danger}15` : `0 0 0 4px ${colors.primaryLight}`,
+        },
       }}
     >
+
       <InputBase
         fullWidth
         autoFocus={autoFocus}

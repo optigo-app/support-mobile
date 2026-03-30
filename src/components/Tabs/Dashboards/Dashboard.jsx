@@ -103,9 +103,8 @@ const Dashboard = () => {
   const total = Object.values(DashboardAnalytics).reduce((acc, val) => {
     return acc + (typeof val === "number" ? val : 0);
   }, 0);
-  if (loading) {
-    return <DashboardSkeleton />
-  }
+
+
 
   return (
     <>
@@ -177,252 +176,183 @@ const Dashboard = () => {
         </Box>
 
 
-        <Box sx={{ width: "100%", mt: 0, px: { xs: 1.5, sm: 3, md: 4 } }}>
-          {/* Section title */}
-          {/* <Typography
-            sx={{
-              fontSize: { xs: 15, sm: 16 },
-              fontWeight: 700,
-              color: "#1a1a1a",
-              mb: { xs: 1.5, sm: 2 },
-              letterSpacing: "-0.01em",
-            }}
-          >
-            Your Tasks
-          </Typography> */}
-
-          {/* <Card
-            sx={{
-              borderRadius: 4,
-              p: 2.2,
-              background: "linear-gradient(135deg, #4A66FF 0%, #1D42FF 100%)",
-              color: "#fff",
-              mb: 2,
-              position: "relative",
-              overflow: "hidden",
-            }}
-          >
-            <IconButton
-              size="small"
-              sx={{
-                position: "absolute",
-                top: 12,
-                right: 12,
-                bgcolor: "rgba(255,255,255,0.25)",
-                backdropFilter: "blur(4px)",
-                width: 32,
-                height: 32,
-                "&:hover": { bgcolor: "rgba(255,255,255,0.35)" },
-              }}
-            >
-              <ArrowOutwardRoundedIcon sx={{ color: "#fff", fontSize: 18 }} />
-            </IconButton>
-
-            <Typography
-              sx={{
-                fontSize: 13,
-                opacity: 0.95,
-                mb: 1,
-                fontWeight: 500,
-              }}
-            >
-              Overall Activity Count
-            </Typography>
-
-            <Typography
-              sx={{
-                fontSize: 34,
-                fontWeight: 700,
-                lineHeight: 1,
-                mb: 0.5,
-              }}
-            >
-              {total}
-            </Typography>
-
-            <Typography
-              sx={{
-                fontSize: 13,
-                opacity: 0.95,
-                fontWeight: 500,
-              }}
-            >
-              Includes: Calls, Tickets, Orders, Training
-            </Typography>
-          </Card> */}
-
-          <Grid container spacing={2} mt={2} mb={2}>
-            {statsCards.map((stat) => {
-              const IconComponent = stat.icon;
-              return (
-                <Grid item xs={6}>
-                  <Card
-                    sx={{
-                      borderRadius: 4,
-                      p: 2,
-                      background: "#fff",
-                      boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
-                      position: "relative",
-                      border: "1px solid rgba(0, 0, 0, 0.06)",
-                    }}
-                    onClick={() => setTabId(stat.id)}
-                  >
-                    <IconButton
-                      size="small"
-                      sx={{
-                        position: "absolute",
-                        top: 12,
-                        right: 12,
-                        background: stat.bgGradient,
-                        width: 32,
-                        height: 32,
-                      }}
-
-                    >
-                      <IconComponent sx={{ fontSize: { xs: 20, sm: 22 }, color: "#fff" }} />
-                    </IconButton>
-
-                    <Typography
-                      sx={{
-                        fontSize: 13,
-                        fontWeight: 600,
-                        color: "#1a1a1a",
-                        mb: 2,
-                        textTransform: "capitalize",
-                      }}
-                    >
-                      {stat?.title}
-                    </Typography>
-
-                    <Typography sx={{ fontSize: 26, fontWeight: 700, color: "#1a1a1a", lineHeight: 1 }}>{stat?.value}</Typography>
-
-                    <Typography sx={{ fontSize: 12, color: "#888", fontWeight: 500, mt: 0.5 }}>{stat?.label}</Typography>
-                  </Card>
-                </Grid>
-              );
-            })}
-          </Grid>
-        </Box>
-        {/* <App/> */}
-        <PromotionCarousel />
-
-
-        <Box sx={{ px: { xs: 1.5, sm: 3, md: 4 } }}>
-          <Typography
-            sx={{
-              fontSize: { xs: 15, sm: 16 },
-              fontWeight: 700,
-              color: "#1a1a1a",
-              mb: { xs: 1.5, sm: 2 },
-              letterSpacing: "-0.01em",
-            }}
-          >
-            Quick Actions
-          </Typography>
-          <Card
-            sx={{
-              borderRadius: { xs: 3, sm: 3 },
-              border: "1px solid rgba(0, 0, 0, 0.06)",
-              boxShadow: "0 4px 16px rgba(0, 0, 0, 0.04)",
-              background: "#ffffff",
-              overflow: "hidden",
-            }}
-          >
-            <List sx={{ p: 0 }}>
-              {quickActions.map((action, index) => {
-                const IconComponent = action.icon;
-                return (
-                  <React.Fragment key={action.id}>
-                    <ListItem
-                      onClick={() => setTabId(action.id)}
-                      button
-                      sx={{
-                        py: { xs: 2, sm: 2.5 },
-                        px: { xs: 2, sm: 2.5 },
-                        border: "1px solid rgba(245, 246, 255, 0.85)",
-                        transition: "all 0.2s",
-                        "&:active": {
-                          bgcolor: "rgba(102, 126, 234, 0.08)",
-                        },
-                        "@media (hover: hover)": {
-                          "&:hover": {
-                            bgcolor: "rgba(102, 126, 234, 0.04)",
-                            "& .action-chevron": {
-                              transform: "translateX(4px)",
-                              color: "#667eea",
-                            },
-                          },
-                        },
-                      }}
-                    >
-                      <ListItemIcon sx={{ minWidth: { xs: 52, sm: 56 } }}>
-                        <Box
+        {loading ? (
+          <DashboardSkeleton hideHeader />
+        ) : (
+          <>
+            <Box sx={{ width: "100%", mt: 0, px: { xs: 1.5, sm: 3, md: 4 } }}>
+              <Grid container spacing={2} mt={2} mb={2}>
+                {statsCards.map((stat) => {
+                  const IconComponent = stat.icon;
+                  return (
+                    <Grid item xs={6} key={stat.id}>
+                      <Card
+                        sx={{
+                          borderRadius: 4,
+                          p: 2,
+                          background: "#fff",
+                          boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
+                          position: "relative",
+                          border: "1px solid rgba(0, 0, 0, 0.06)",
+                        }}
+                        onClick={() => setTabId(stat.id)}
+                      >
+                        <IconButton
+                          size="small"
                           sx={{
-                            width: { xs: 40, sm: 44 },
-                            height: { xs: 40, sm: 44 },
-                            borderRadius: 15,
-                            background: action.iconBg,
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            boxShadow: "0 4px 12px rgba(0, 0, 0, 0.1)",
+                            position: "absolute",
+                            top: 12,
+                            right: 12,
+                            background: stat.bgGradient,
+                            width: 32,
+                            height: 32,
                           }}
                         >
                           <IconComponent sx={{ fontSize: { xs: 20, sm: 22 }, color: "#fff" }} />
-                        </Box>
-                      </ListItemIcon>
-                      <ListItemText
-                        primary={
-                          <Typography
-                            sx={{
-                              fontSize: { xs: 14, sm: 15 },
-                              fontWeight: 600,
-                              color: "#1a1a1a",
-                              mb: 0.25,
-                            }}
-                          >
-                            {action.title}
-                          </Typography>
-                        }
-                        secondary={
-                          <Typography
-                            sx={{
-                              fontSize: { xs: 12, sm: 13 },
-                              color: "#888",
-                              fontWeight: 500,
-                              lineHeight: 1.4,
-                            }}
-                          >
-                            {action.description}
-                          </Typography>
-                        }
-                      />
-                      <ChevronRightRounded
-                        className="action-chevron"
-                        sx={{
-                          fontSize: { xs: 22, sm: 24 },
-                          color: "#ccc",
-                          transition: "all 0.2s",
-                        }}
-                      />
-                    </ListItem>
-                    {index < quickActions.length - 1 && (
-                      <Box
-                        sx={{
-                          height: 1,
-                          bgcolor: "rgba(0, 0, 0, 0.06)",
-                          mx: { xs: 2, sm: 2.5 },
-                        }}
-                      />
-                    )}
-                  </React.Fragment>
-                );
-              })}
-            </List>
-          </Card>
-        </Box>
+                        </IconButton>
 
-        <Hello />
+                        <Typography
+                          sx={{
+                            fontSize: 13,
+                            fontWeight: 600,
+                            color: "#1a1a1a",
+                            mb: 2,
+                            textTransform: "capitalize",
+                          }}
+                        >
+                          {stat?.title}
+                        </Typography>
+
+                        <Typography sx={{ fontSize: 26, fontWeight: 700, color: "#1a1a1a", lineHeight: 1 }}>{stat?.value}</Typography>
+
+                        <Typography sx={{ fontSize: 12, color: "#888", fontWeight: 500, mt: 0.5 }}>{stat?.label}</Typography>
+                      </Card>
+                    </Grid>
+                  );
+                })}
+              </Grid>
+            </Box>
+
+            <PromotionCarousel />
+
+            <Box sx={{ px: { xs: 1.5, sm: 3, md: 4 } }}>
+              <Typography
+                sx={{
+                  fontSize: { xs: 15, sm: 16 },
+                  fontWeight: 700,
+                  color: "#1a1a1a",
+                  mb: { xs: 1.5, sm: 2 },
+                  letterSpacing: "-0.01em",
+                }}
+              >
+                Quick Actions
+              </Typography>
+              <Card
+                sx={{
+                  borderRadius: { xs: 3, sm: 3 },
+                  border: "1px solid rgba(0, 0, 0, 0.06)",
+                  boxShadow: "0 4px 16px rgba(0, 0, 0, 0.04)",
+                  background: "#ffffff",
+                  overflow: "hidden",
+                }}
+              >
+                <List sx={{ p: 0 }}>
+                  {quickActions.map((action, index) => {
+                    const IconComponent = action.icon;
+                    return (
+                      <React.Fragment key={action.id}>
+                        <ListItem
+                          onClick={() => setTabId(action.id)}
+                          button
+                          sx={{
+                            py: { xs: 2, sm: 2.5 },
+                            px: { xs: 2, sm: 2.5 },
+                            border: "1px solid rgba(245, 246, 255, 0.85)",
+                            transition: "all 0.2s",
+                            "&:active": {
+                              bgcolor: "rgba(102, 126, 234, 0.08)",
+                            },
+                            "@media (hover: hover)": {
+                              "&:hover": {
+                                bgcolor: "rgba(102, 126, 234, 0.04)",
+                                "& .action-chevron": {
+                                  transform: "translateX(4px)",
+                                  color: "#667eea",
+                                },
+                              },
+                            },
+                          }}
+                        >
+                          <ListItemIcon sx={{ minWidth: { xs: 52, sm: 56 } }}>
+                            <Box
+                              sx={{
+                                width: { xs: 40, sm: 44 },
+                                height: { xs: 40, sm: 44 },
+                                borderRadius: 15,
+                                background: action.iconBg,
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                boxShadow: "0 4px 12px rgba(0, 0, 0, 0.1)",
+                              }}
+                            >
+                              <IconComponent sx={{ fontSize: { xs: 20, sm: 22 }, color: "#fff" }} />
+                            </Box>
+                          </ListItemIcon>
+                          <ListItemText
+                            primary={
+                              <Typography
+                                sx={{
+                                  fontSize: { xs: 14, sm: 15 },
+                                  fontWeight: 600,
+                                  color: "#1a1a1a",
+                                  mb: 0.25,
+                                }}
+                              >
+                                {action.title}
+                              </Typography>
+                            }
+                            secondary={
+                              <Typography
+                                sx={{
+                                  fontSize: { xs: 12, sm: 13 },
+                                  color: "#888",
+                                  fontWeight: 500,
+                                  lineHeight: 1.4,
+                                }}
+                              >
+                                {action.description}
+                              </Typography>
+                            }
+                          />
+                          <ChevronRightRounded
+                            className="action-chevron"
+                            sx={{
+                              fontSize: { xs: 22, sm: 24 },
+                              color: "#ccc",
+                              transition: "all 0.2s",
+                            }}
+                          />
+                        </ListItem>
+                        {index < quickActions.length - 1 && (
+                          <Box
+                            sx={{
+                              height: 1,
+                              bgcolor: "rgba(0, 0, 0, 0.06)",
+                              mx: { xs: 2, sm: 2.5 },
+                            }}
+                          />
+                        )}
+                      </React.Fragment>
+                    );
+                  })}
+                </List>
+              </Card>
+            </Box>
+
+            <Hello />
+          </>
+        )}
       </HomeScrollArea>
     </>
   );
