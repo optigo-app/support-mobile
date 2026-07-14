@@ -162,7 +162,7 @@ export function CallLogProvider(props) {
         entryDate: call?.date || "",
         projectID: call?.companyName || "",
         CorpId: call?.CorpId || "",
-        source: "client",
+        source: "OptigoCarely",
       });
       setrefreshList((prev) => !prev);
       return data;

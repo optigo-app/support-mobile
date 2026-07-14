@@ -1,5 +1,5 @@
 import React, { memo } from "react";
-import { Box,  InputBase, FormLabel, Button,  } from "@mui/material";
+import { Box, InputBase, FormLabel, Button, Typography } from "@mui/material";
 
 // --- Constants & Styles (Defined outside to prevent recreation) ---
 const colors = {
@@ -10,6 +10,8 @@ const colors = {
   primary: "#3B82F6",
   primaryLight: "#EFF6FF",
   black: "#111827",
+  error: "#ef4444",
+  errorLight: "#fef2f2",
 };
 
 const inputContainerStyle = {
@@ -57,14 +59,27 @@ const getCurrentDateTime = () => {
 
 // --- Memoized Child Components (Prevents unneeded re-renders) ---
 
-const CustomField = memo(({ label, placeholder, multiline, icon, value, readOnly, name, onChange, disable }) => (
+const CustomField = memo(({ label, placeholder, multiline, icon, value, readOnly, name, onChange, disable, required, error, helperText }) => (
   <Box sx={{ mb: 3 }}>
-    <FormLabel sx={labelStyle}>{label}</FormLabel>
+    <FormLabel sx={{ ...labelStyle, display: "flex", alignItems: "center", gap: "2px" }}>
+      {label}
+      {required && (
+        <Typography component="span" sx={{ color: colors.error, fontSize: "14px", fontWeight: "bold" }}>
+          *
+        </Typography>
+      )}
+    </FormLabel>
     <Box
       sx={{
         ...inputContainerStyle,
         alignItems: multiline ? "flex-start" : "center",
         backgroundColor: readOnly ? "#F3F4F6" : "#FFFFFF",
+        borderColor: error ? colors.error : colors.border,
+        "&:hover": { borderColor: error ? "#dc2626" : "#d1d5db" },
+        "&:focus-within": {
+          borderColor: error ? colors.error : colors.primary,
+          boxShadow: `0 0 0 2px ${error ? colors.errorLight : colors.primaryLight}`,
+        },
       }}
     >
       <InputBase
@@ -87,6 +102,11 @@ const CustomField = memo(({ label, placeholder, multiline, icon, value, readOnly
       />
       {icon && <Box sx={{ color: colors.textSub, ml: 1, display: "flex", alignItems: "center" }}>{icon}</Box>}
     </Box>
+    {error && helperText && (
+      <Typography sx={{ color: colors.error, fontSize: "12px", mt: 0.5, fontWeight: 500 }}>
+        {helperText}
+      </Typography>
+    )}
   </Box>
 ));
 

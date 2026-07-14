@@ -4,9 +4,9 @@ import ReactDOM from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
 import * as serviceWorkerRegistration from "./serviceWorker";
 import { AppProviders } from "./Providers/AppProviders";
-import AppTheme from './Providers/AppTheme';
+import AppTheme from "./Providers/AppTheme";
 import App from "./Entry";
-import '@fontsource/poppins'
+import "@fontsource/poppins";
 
 // import PoweredByLogin from "./components/DummyLogger";
 
@@ -14,7 +14,7 @@ const root = ReactDOM.createRoot(document.getElementById("root"));
 root.render(
   <>
     <Suspense fallback={<div></div>}>
-      <BrowserRouter
+      <BrowserRouter  
         future={{
           v7_startTransition: true,
           v7_relativeSplatPath: true,
@@ -28,7 +28,7 @@ root.render(
         </AppProviders>
       </BrowserRouter>
     </Suspense>
-  </>
+  </>,
 );
 
-serviceWorkerRegistration.register();
+// serviceWorkerRegistration.register();

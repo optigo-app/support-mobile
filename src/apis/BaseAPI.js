@@ -12,7 +12,6 @@ class ApiError extends Error {
   }
 }
 
-
 class BaseAPI {
   // static BASE_URL = process.env.NODE_ENV === "production" ? "https://livenx.optigoapps.com/api/report" : "http://newnextjs.web/api/report";
   static BASE_URL = (() => {
@@ -23,13 +22,12 @@ class BaseAPI {
     // // return "https://apilx.optigoapps.com/api/report";
     // }
     // return process.env.NODE_ENV === "production" ? "https://apilx.optigoapps.com/api/report" : "http://newnextjs.web/api/report";
-    // return "http://newnextjs.web/api/report";
-    return "https://apilx.optigoapps.com/api/report";
+    return "http://newnextjs.web/api/report";
+    // return "https://apilx.optigoapps.com/api/report";
   })();
 
   // static BASE_URL = "http://newnextjs.web/api/report";
   static config = {};
-
 
   static serviceConfigs = {};
 
@@ -48,24 +46,46 @@ class BaseAPI {
   }
 
   static getConfig(serviceName = null) {
-    return serviceName && this.serviceConfigs[serviceName] ? this.serviceConfigs[serviceName] : this.config;
+    return serviceName && this.serviceConfigs[serviceName]
+      ? this.serviceConfigs[serviceName]
+      : this.config;
   }
 
-  static getHeaders(yearCode, serviceName = null, sp, version, DeviceToken, sv) {
+  static getHeaders(
+    yearCode,
+    serviceName = null,
+    sp,
+    version,
+    DeviceToken,
+    sv,
+  ) {
     const config = this.getConfig(serviceName);
 
     return {
       "Content-Type": "application/json",
-      ...((yearCode || config.YEAR_CODE) && { YearCode: yearCode || config.YEAR_CODE }),
+      ...((yearCode || config.YEAR_CODE) && {
+        YearCode: yearCode || config.YEAR_CODE,
+      }),
       version: version || config.VERSION_NO,
-      sv: sv || '0',
+      sv: sv || "0",
       sp: sp || config?.SP,
-      'Authorization': `Bearer ${DeviceToken}`
+      Authorization: `Bearer ${DeviceToken}`,
     };
   }
 
-
-  static async requestToApi({ mode, params, yearCode, functionName, serviceName = "CallLog", sp, version, socketEvent, signal, DeviceToken, sv }) {
+  static async requestToApi({
+    mode,
+    params,
+    yearCode,
+    functionName,
+    serviceName = "CallLog",
+    sp,
+    version,
+    socketEvent,
+    signal,
+    DeviceToken,
+    sv,
+  }) {
     const config = this.getConfig(serviceName);
 
     const body = {
@@ -73,7 +93,7 @@ class BaseAPI {
         id: "",
         mode,
         appuserid: config?.APP_USER_ID || this?.config?.APP_USER_ID,
-        ...(socketEvent && { socketEvent })
+        ...(socketEvent && { socketEvent }),
       }),
       p: JSON.stringify(params),
       f: `${serviceName} (${functionName})`,
@@ -82,14 +102,26 @@ class BaseAPI {
     try {
       const response = await fetch(this.BASE_URL, {
         method: "POST",
-        headers: this.getHeaders(yearCode, serviceName, sp, version, DeviceToken, sv, sp),
+        headers: this.getHeaders(
+          yearCode,
+          serviceName,
+          sp,
+          version,
+          DeviceToken,
+          sv,
+          sp,
+        ),
         body: JSON.stringify(body),
         signal,
       });
 
       const data = await response.json();
       if (!response.ok) {
-        throw new ApiError(data.message || `Failed to ${functionName.toLowerCase()}`, functionName, response);
+        throw new ApiError(
+          data.message || `Failed to ${functionName.toLowerCase()}`,
+          functionName,
+          response,
+        );
       }
 
       return data?.Data;
@@ -98,12 +130,14 @@ class BaseAPI {
         console.error(`Error during "${error.functionName}" operation:`, error);
         throw error;
       } else {
-        console.error(`Unexpected error during "${functionName}" operation:`, error);
+        console.error(
+          `Unexpected error during "${functionName}" operation:`,
+          error,
+        );
         throw new ApiError(error.message, functionName);
       }
     }
   }
-
 
   static async getToken(DeviceToken, sv) {
     try {
@@ -114,8 +148,8 @@ class BaseAPI {
         functionName: "gettoken_corp",
         DeviceToken: DeviceToken,
         sv: sv,
-        version: 'v4',
-        sp: '14'
+        version: "v4",
+        sp: "14",
       });
 
       return response;
@@ -124,7 +158,6 @@ class BaseAPI {
       throw error;
     }
   }
-
 }
 
 export { BaseAPI, ApiError };

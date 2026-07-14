@@ -72,7 +72,7 @@ export default function DynamicIslandNav({ tabId, setTabId }) {
                 marginLeft: active ? 2 : 0,
               }}
             >
-              {React.cloneElement(tab.icon, { sx: { fontSize: 18 } })}
+              {React.cloneElement(tab.icon, { sx: { fontSize: 23 } })}
             </motion.div>
             <motion.div
               layout
@@ -91,7 +91,7 @@ export default function DynamicIslandNav({ tabId, setTabId }) {
             >
               <Typography
                 sx={{
-                  fontSize: 12,
+                  fontSize: 13,
                   fontWeight: 700,
                   color: "#1a1a1a",
                   pr: active ? 1.5 : 0,

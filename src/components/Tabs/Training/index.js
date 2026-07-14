@@ -1,6 +1,27 @@
-import React, { useState, useMemo, useRef, useEffect, useCallback } from "react"; // ADDED useEffect
-import { Box, Typography, Avatar, Chip, ListItemButton, List, Stack, CircularProgress } from "@mui/material"; // ADDED CircularProgress
-import { SchoolRounded, TimerRounded, AssignmentTurnedInRounded, PendingActionsRounded } from "@mui/icons-material";
+import React, {
+  useState,
+  useMemo,
+  useRef,
+  useEffect,
+  useCallback,
+} from "react"; // ADDED useEffect
+import { useSearchParams } from "react-router-dom";
+import {
+  Box,
+  Typography,
+  Avatar,
+  Chip,
+  ListItemButton,
+  List,
+  Stack,
+  CircularProgress,
+} from "@mui/material"; // ADDED CircularProgress
+import {
+  SchoolRounded,
+  TimerRounded,
+  AssignmentTurnedInRounded,
+  PendingActionsRounded,
+} from "@mui/icons-material";
 
 import { EmailScrollArea } from "../../ui/ScrollArea";
 import TicketFilterDrawer from "../../ui/TicketFilterDrawer";
@@ -9,9 +30,18 @@ import TrainingDetailsDrawer from "./details";
 import { TRAINING_FILTER_DEFINITIONS } from "../../../utils/FiltersOptions";
 import { useDynamicFilters } from "../../../hooks/useDynamicFilters";
 import { useTraining } from "../../../contexts/TrainingProvider";
-import { formatRobustDate, todayDate, yesterdayDate, thisMonthStart, thisMonthEnd, thisWeekStart, thisWeekEnd } from "../../../utils/dateFormatter";
+import {
+  formatRobustDate,
+  todayDate,
+  yesterdayDate,
+  thisMonthStart,
+  thisMonthEnd,
+  thisWeekStart,
+  thisWeekEnd,
+} from "../../../utils/dateFormatter";
 import { FullPageRating } from "./../../ui/RatingModal";
 import Loader from "../../ui/Loader";
+import TrainingAPI from "../../../apis/TrainingController";
 
 const COLORS = {
   successBg: "rgba(58, 248, 126, 0.08)",
@@ -29,7 +59,12 @@ const COLORS = {
 };
 
 function getAvatarGradient(name) {
-  const gradients = ["linear-gradient(135deg, #FF9966 0%, #FF5E62 100%)", "linear-gradient(135deg, #56CCF2 0%, #2F80ED 100%)", "linear-gradient(135deg, #11998e 0%, #38ef7d 100%)", "linear-gradient(135deg, #8E2DE2 0%, #4A00E0 100%)"];
+  const gradients = [
+    "linear-gradient(135deg, #FF9966 0%, #FF5E62 100%)",
+    "linear-gradient(135deg, #56CCF2 0%, #2F80ED 100%)",
+    "linear-gradient(135deg, #11998e 0%, #38ef7d 100%)",
+    "linear-gradient(135deg, #8E2DE2 0%, #4A00E0 100%)",
+  ];
   const index = name ? name.length % gradients.length : 0;
   return gradients[index];
 }
@@ -37,17 +72,39 @@ function getAvatarGradient(name) {
 function getStatusStyle(status) {
   const normalized = status?.toLowerCase() || "";
   if (normalized === "completed") {
-    return { bg: COLORS.successBg, color: COLORS.successText, icon: <AssignmentTurnedInRounded sx={{ fontSize: 12 }} /> };
+    return {
+      bg: COLORS.successBg,
+      color: COLORS.successText,
+      icon: <AssignmentTurnedInRounded sx={{ fontSize: 12 }} />,
+    };
   } else if (normalized === "pending" || normalized === "in progress") {
-    return { bg: COLORS.pendingBg, color: COLORS.pendingText, icon: <PendingActionsRounded sx={{ fontSize: 12 }} /> };
+    return {
+      bg: COLORS.pendingBg,
+      color: COLORS.pendingText,
+      icon: <PendingActionsRounded sx={{ fontSize: 12 }} />,
+    };
   } else if (normalized === "overdue") {
-    return { bg: COLORS.warningBg, color: COLORS.warningText, icon: <TimerRounded sx={{ fontSize: 12 }} /> };
+    return {
+      bg: COLORS.warningBg,
+      color: COLORS.warningText,
+      icon: <TimerRounded sx={{ fontSize: 12 }} />,
+    };
   }
-  return { bg: COLORS.neutralBg, color: COLORS.neutralText, icon: <SchoolRounded sx={{ fontSize: 12 }} /> };
+  return {
+    bg: COLORS.neutralBg,
+    color: COLORS.neutralText,
+    icon: <SchoolRounded sx={{ fontSize: 12 }} />,
+  };
 }
 
 const TrainingLogsApp = () => {
-  const { filterDefinitions, selectedFilters, totalFilters, toggleFilter, clearAllFilters } = useDynamicFilters(TRAINING_FILTER_DEFINITIONS);
+  const {
+    filterDefinitions,
+    selectedFilters,
+    totalFilters,
+    toggleFilter,
+    clearAllFilters,
+  } = useDynamicFilters(TRAINING_FILTER_DEFINITIONS);
   const [searchQuery, setSearchQuery] = useState("");
   const [isRatingModalOpen, setIsRatingModalOpen] = useState(null);
 
@@ -58,33 +115,168 @@ const TrainingLogsApp = () => {
   const scrollRef = useRef(null);
   const isFirstRender = useRef(true);
 
-  const { AddFeedBack, Traininglist, loadMore, hasMore, filters, updateFilters, isFetching, refreshTrainingData } = useTraining();
+  const {
+    AddFeedBack,
+    Traininglist,
+    loadMore,
+    hasMore,
+    filters,
+    updateFilters,
+    isFetching,
+    refreshTrainingData,
+  } = useTraining();
+
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  useEffect(() => {
+    const trainingIdInUrl = searchParams.get("trainingId");
+    const rateInUrl = searchParams.get("rate") === "true";
+
+    if (trainingIdInUrl) {
+      const training = Traininglist.find(
+        (item) => String(item.SessionID) === String(trainingIdInUrl),
+      );
+      if (training) {
+        if (trainingData?.SessionID !== training.SessionID) {
+          setTrainingData(training);
+          setOpen(true);
+        }
+        if (rateInUrl) {
+          if (isRatingModalOpen !== training.SessionID) {
+            setIsRatingModalOpen(training.SessionID);
+          }
+        } else {
+          if (isRatingModalOpen !== null) {
+            setIsRatingModalOpen(null);
+          }
+        }
+      } else if (!isFetching && Traininglist.length > 0) {
+        const fetchAndSelect = async () => {
+          try {
+            const res = await TrainingAPI.listTrainings({
+              SearchTerm: trainingIdInUrl,
+              PageSize: 1,
+            });
+            const found = res?.Data?.rd?.find(
+              (item) => String(item.SessionID) === String(trainingIdInUrl),
+            );
+            if (found) {
+              setTrainingData(found);
+              setOpen(true);
+              if (rateInUrl) {
+                setIsRatingModalOpen(found.SessionID);
+              }
+            }
+          } catch (e) {
+            console.error(e);
+          }
+        };
+        fetchAndSelect();
+      }
+    } else {
+      if (open) {
+        setOpen(false);
+        setTrainingData(null);
+      }
+      if (isRatingModalOpen !== null) {
+        setIsRatingModalOpen(null);
+      }
+    }
+  }, [searchParams, Traininglist, isFetching]);
 
   const options = useMemo(
     () => [
       { label: "all", Filter: "", StartDate: "", EndDate: "" },
 
       // Status Filters (Filter is empty string)
-      { label: "Completed", Filter: "", StartDate: "", EndDate: "", value: "Completed" },
-      { label: "Pending", Filter: "", StartDate: "", EndDate: "", value: "Pending" },
-      { label: "Cancelled", Filter: "", StartDate: "", EndDate: "", value: "Cancelled" },
+      {
+        label: "Completed",
+        Filter: "",
+        StartDate: "",
+        EndDate: "",
+        value: "Completed",
+      },
+      {
+        label: "Pending",
+        Filter: "",
+        StartDate: "",
+        EndDate: "",
+        value: "Pending",
+      },
+      {
+        label: "Cancelled",
+        Filter: "",
+        StartDate: "",
+        EndDate: "",
+        value: "Cancelled",
+      },
 
       // Date Filters
-      { label: "today", Filter: "date", StartDate: todayDate, EndDate: todayDate },
-      { label: "yesterday", Filter: "date", StartDate: yesterdayDate, EndDate: yesterdayDate },
-      { label: "month", Filter: "date", StartDate: thisMonthStart, EndDate: thisMonthEnd },
-      { label: "week", Filter: "date", StartDate: thisWeekStart, EndDate: thisWeekEnd },
+      {
+        label: "today",
+        Filter: "date",
+        StartDate: todayDate,
+        EndDate: todayDate,
+      },
+      {
+        label: "yesterday",
+        Filter: "date",
+        StartDate: yesterdayDate,
+        EndDate: yesterdayDate,
+      },
+      {
+        label: "month",
+        Filter: "date",
+        StartDate: thisMonthStart,
+        EndDate: thisMonthEnd,
+      },
+      {
+        label: "week",
+        Filter: "date",
+        StartDate: thisWeekStart,
+        EndDate: thisWeekEnd,
+      },
 
       // Training Type Filters
-      { label: "Ignite", Filter: "trainingType", StartDate: "", EndDate: "", value: "Ignite" },
-      { label: "Re Training", Filter: "trainingType", StartDate: "", EndDate: "", value: "Re Training" },
-      { label: "New", Filter: "trainingType", StartDate: "", EndDate: "", value: "New" },
+      {
+        label: "Ignite",
+        Filter: "trainingType",
+        StartDate: "",
+        EndDate: "",
+        value: "Ignite",
+      },
+      {
+        label: "Re Training",
+        Filter: "trainingType",
+        StartDate: "",
+        EndDate: "",
+        value: "Re Training",
+      },
+      {
+        label: "New",
+        Filter: "trainingType",
+        StartDate: "",
+        EndDate: "",
+        value: "New",
+      },
 
       // Training Mode Filters
-      { label: "Online", Filter: "trainingMode", StartDate: "", EndDate: "", value: "Online" },
-      { label: "Offline", Filter: "trainingMode", StartDate: "", EndDate: "", value: "Offline" },
+      {
+        label: "Online",
+        Filter: "trainingMode",
+        StartDate: "",
+        EndDate: "",
+        value: "Online",
+      },
+      {
+        label: "Offline",
+        Filter: "trainingMode",
+        StartDate: "",
+        EndDate: "",
+        value: "Offline",
+      },
     ],
-    []
+    [],
   );
 
   useEffect(() => {
@@ -110,7 +302,8 @@ const TrainingLogsApp = () => {
     const element = scrollRef.current;
     if (!element) return;
     const handleScroll = () => {
-      const isNearBottom = element.scrollHeight - element.scrollTop <= element.clientHeight + 200;
+      const isNearBottom =
+        element.scrollHeight - element.scrollTop <= element.clientHeight + 200;
       if (isNearBottom && hasMore && !isFetching) {
         loadMoreLogs();
       }
@@ -122,11 +315,32 @@ const TrainingLogsApp = () => {
   const handleOpenDrawer = (log) => {
     setTrainingData(log);
     setOpen(true);
+    const newParams = new URLSearchParams(searchParams);
+    newParams.set("trainingId", log.SessionID.toString());
+    setSearchParams(newParams);
   };
 
   const handleCloseDrawer = () => {
     setOpen(false);
     setTrainingData(null);
+    const newParams = new URLSearchParams(searchParams);
+    newParams.delete("trainingId");
+    newParams.delete("rate");
+    setSearchParams(newParams);
+  };
+
+  const handleRatingOpen = (sessionId) => {
+    setIsRatingModalOpen(sessionId);
+    const newParams = new URLSearchParams(searchParams);
+    newParams.set("rate", "true");
+    setSearchParams(newParams);
+  };
+
+  const handleRatingClose = () => {
+    setIsRatingModalOpen(null);
+    const newParams = new URLSearchParams(searchParams);
+    newParams.delete("rate");
+    setSearchParams(newParams);
   };
 
   const HandleRatingSubmit = async (trainingId, rating, remark) => {
@@ -137,9 +351,8 @@ const TrainingLogsApp = () => {
         rating: rating,
       });
       if (res) {
-        setIsRatingModalOpen(null);
-        setOpen(false);
-        setTrainingData(null);
+        handleRatingClose();
+        handleCloseDrawer();
       }
     } catch (error) {
       console.log("🚀 ~ HandleRatingSubmit ~ error:", error);
@@ -150,8 +363,7 @@ const TrainingLogsApp = () => {
     const match = options.find((opt) => {
       if (opt.Filter === "date") {
         return (
-          filters.StartDate === opt.StartDate &&
-          filters.EndDate === opt.EndDate
+          filters.StartDate === opt.StartDate && filters.EndDate === opt.EndDate
         );
       }
       if (opt.Filter === "trainingType") {
@@ -204,7 +416,15 @@ const TrainingLogsApp = () => {
   };
 
   return (
-    <Box sx={{ display: "flex", flexDirection: "column", overflow: "hidden", bgcolor: "#f0f2f5", height: "100%" }}>
+    <Box
+      sx={{
+        display: "flex",
+        flexDirection: "column",
+        overflow: "hidden",
+        bgcolor: "#f0f2f5",
+        height: "100%",
+      }}
+    >
       <GmailStyleHeader
         FilteringOptions={options}
         onFilterChange={handleHeaderFilterChange}
@@ -229,7 +449,6 @@ const TrainingLogsApp = () => {
           </Box>
         ) : (
           <List disablePadding>
-
             {visibleLogs?.map((log) => {
               const statusStyle = getStatusStyle(log?.Status);
               const formatted = formatRobustDate(log?.EntryDate);
@@ -264,7 +483,9 @@ const TrainingLogsApp = () => {
                         flexShrink: 0,
                       }}
                     >
-                      {log?.TrainingBy ? log.TrainingBy.charAt(0).toUpperCase() : "T"}
+                      {log?.TrainingBy
+                        ? log.TrainingBy.charAt(0).toUpperCase()
+                        : "T"}
                     </Avatar>
 
                     {/* RIGHT CONTENT  */}
@@ -272,7 +493,13 @@ const TrainingLogsApp = () => {
                       {/* -------------------------------- */}
                       {/* ROW 1: TrainingBy — Time */}
                       {/* -------------------------------- */}
-                      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <Box
+                        sx={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "center",
+                        }}
+                      >
                         <Typography
                           sx={{
                             fontWeight: 600,
@@ -296,7 +523,8 @@ const TrainingLogsApp = () => {
                             whiteSpace: "nowrap",
                           }}
                         >
-                          {formatted?.smart} {/* Used DurationTime here, assuming it's the right-side metric */}
+                          {formatted?.smart}{" "}
+                          {/* Used DurationTime here, assuming it's the right-side metric */}
                         </Typography>
                       </Box>
 
@@ -410,17 +638,44 @@ const TrainingLogsApp = () => {
 
             {/* End of list message */}
             {!hasMore && visibleLogs?.length > 0 && (
-              <Box sx={{ p: 2, textAlign: "center", color: COLORS.textSecondary }}>
-                <Typography variant="caption">All training records loaded ({visibleLogs?.length})</Typography>
+              <Box
+                sx={{ p: 2, textAlign: "center", color: COLORS.textSecondary }}
+              >
+                <Typography variant="caption">
+                  All training records loaded ({visibleLogs?.length})
+                </Typography>
               </Box>
             )}
           </List>
         )}
       </EmailScrollArea>
 
-      <TicketFilterDrawer onClose={() => setAnchorElSort(false)} open={anchorElSort} title="Filter Training" filterDefinitions={filterDefinitions} selectedFilters={selectedFilters} onToggleFilter={toggleFilter} onClearAll={clearAllFilters} totalFilters={totalFilters} onApply={() => setAnchorElSort(false)} />
-      <TrainingDetailsDrawer onRatingOpen={() => setIsRatingModalOpen(trainingData?.SessionID)} trainingData={trainingData} open={open} onClose={handleCloseDrawer} onOpen={handleOpenDrawer} />
-      <FullPageRating open={isRatingModalOpen} onClose={() => setIsRatingModalOpen(null)} onConfirm={() => setIsRatingModalOpen(null)} onSubmit={HandleRatingSubmit} Call={false} title="this training" />
+      <TicketFilterDrawer
+        onClose={() => setAnchorElSort(false)}
+        open={anchorElSort}
+        title="Filter Training"
+        filterDefinitions={filterDefinitions}
+        selectedFilters={selectedFilters}
+        onToggleFilter={toggleFilter}
+        onClearAll={clearAllFilters}
+        totalFilters={totalFilters}
+        onApply={() => setAnchorElSort(false)}
+      />
+      <TrainingDetailsDrawer
+        onRatingOpen={() => handleRatingOpen(trainingData?.SessionID)}
+        trainingData={trainingData}
+        open={open}
+        onClose={handleCloseDrawer}
+        onOpen={handleOpenDrawer}
+      />
+      <FullPageRating
+        open={isRatingModalOpen}
+        onClose={handleRatingClose}
+        onConfirm={handleRatingClose}
+        onSubmit={HandleRatingSubmit}
+        Call={false}
+        title="this training"
+      />
     </Box>
   );
 };

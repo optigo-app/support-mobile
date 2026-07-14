@@ -14,6 +14,7 @@ export default function AddTaskFormDrawer({ open, onClose }) {
   const { user } = useAuth();
   const { companyOptions, APPNAME_LIST, addCall } = useCallLog();
   const [loading, setloading] = useState(false);
+  const [errors, setErrors] = useState({ description: "" });
 
   // Unified State (Reduces render cycles)
   const [formState, setFormState] = useState({
@@ -46,6 +47,7 @@ export default function AddTaskFormDrawer({ open, onClose }) {
         customerName: user?.fullName || "",
         description: "",
       });
+      setErrors({ description: "" });
     }
     // We strictly depend on 'open' and the source data.
     // This ensures fields reset correctly when opening.
@@ -55,6 +57,9 @@ export default function AddTaskFormDrawer({ open, onClose }) {
   const handleInputChange = useCallback((e) => {
     const { name, value } = e.target;
     setFormState((prev) => ({ ...prev, [name]: value }));
+    if (name === "description" && value.trim()) {
+      setErrors((prev) => ({ ...prev, description: "" }));
+    }
   }, []);
 
   const handleAppSelect = useCallback((appId) => {
@@ -62,6 +67,11 @@ export default function AddTaskFormDrawer({ open, onClose }) {
   }, []);
 
   const handleSubmit = useCallback(async () => {
+    if (!formState.description || !formState.description.trim()) {
+      setErrors({ description: "Description is required" });
+      return;
+    }
+
     setloading(true);
     try {
       // Reformat date for API: dd-mm-yyyy to yyyy-mm-dd
@@ -73,7 +83,7 @@ export default function AddTaskFormDrawer({ open, onClose }) {
         time: formState.currentTime,
         companyName: formState.companyNameValue,
         customerName: formState.customerName,
-        description: formState.description,
+        description: formState.description.trim(),
         appId: formState.selectedAppId,
         CorpId: user?.id,
         source: "client",
@@ -155,7 +165,17 @@ export default function AddTaskFormDrawer({ open, onClose }) {
 
           <CustomField label="Customer Name" placeholder="Customer Name" name="customerName" value={formState.customerName} disable={true} />
 
-          <CustomField label="Description" multiline placeholder="Add description..." name="description" value={formState.description} onChange={handleInputChange} />
+          <CustomField
+            label="Description"
+            multiline
+            placeholder="Add description..."
+            name="description"
+            value={formState.description}
+            onChange={handleInputChange}
+            required={true}
+            error={!!errors.description}
+            helperText={errors.description}
+          />
 
           {/* App Selection */}
           <Box>

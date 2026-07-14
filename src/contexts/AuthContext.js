@@ -1,4 +1,11 @@
-import React, { createContext, useState, useContext, useEffect, useCallback, useMemo } from "react";
+import React, {
+  createContext,
+  useState,
+  useContext,
+  useEffect,
+  useCallback,
+  useMemo,
+} from "react";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { BaseAPI } from "../apis/BaseAPI";
 import DeliveryAPI from "../apis/DeliveryController";
@@ -11,7 +18,6 @@ import { Box, Typography, Stack, Button } from "@mui/material";
 
 const PUBLIC_ROUTES = ["/privacy-policy", "/steps-account-delete", "/support"];
 const AUTH_STORAGE_KEY = "SUPPORT_AUTH_DATA";
-
 
 const AuthContext = createContext(null);
 
@@ -47,7 +53,9 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const [auth, setAuth] = useState(
-    storedAuth ? { user: storedAuth.user, token: storedAuth.token } : { user: null, token: null }
+    storedAuth
+      ? { user: storedAuth.user, token: storedAuth.token }
+      : { user: null, token: null },
   );
 
   const [services, setServices] = useState(() => {
@@ -55,21 +63,27 @@ export const AuthProvider = ({ children }) => {
       // Initialize services synchronously for "lightning fast" boot
       const ok = storedAuth.raw;
       try {
-        BaseAPI.initialize({
-          YEAR_CODE: ok?.rd[0]?.yc,
-          SV: ok?.rd[0]?.sv,
-          SP: SERVICE_CONFIG.TICKET.SP,
-          APP_USER_ID: ok?.rd2[0]?.userid,
-          VERSION_NO: SERVICE_CONFIG.TICKET.VERSION_NO,
-        }, SERVICE_CONFIG.TICKET.SERVICE_NAME);
+        BaseAPI.initialize(
+          {
+            YEAR_CODE: ok?.rd[0]?.yc,
+            SV: ok?.rd[0]?.sv,
+            SP: SERVICE_CONFIG.TICKET.SP,
+            APP_USER_ID: ok?.rd2[0]?.userid,
+            VERSION_NO: SERVICE_CONFIG.TICKET.VERSION_NO,
+          },
+          SERVICE_CONFIG.TICKET.SERVICE_NAME,
+        );
 
-        BaseAPI.initialize({
-          YEAR_CODE: ok?.rd[0]?.yc,
-          SV: ok?.rd[0]?.sv,
-          SP: SERVICE_CONFIG.CALL_LOG.SP,
-          APP_USER_ID: ok?.rd2[0]?.userid,
-          VERSION_NO: SERVICE_CONFIG.CALL_LOG.VERSION_NO,
-        }, SERVICE_CONFIG.CALL_LOG.SERVICE_NAME);
+        BaseAPI.initialize(
+          {
+            YEAR_CODE: ok?.rd[0]?.yc,
+            SV: ok?.rd[0]?.sv,
+            SP: SERVICE_CONFIG.CALL_LOG.SP,
+            APP_USER_ID: ok?.rd2[0]?.userid,
+            VERSION_NO: SERVICE_CONFIG.CALL_LOG.VERSION_NO,
+          },
+          SERVICE_CONFIG.CALL_LOG.SERVICE_NAME,
+        );
 
         TrainingAPI.initialize(ok);
         DeliveryAPI.initialize(ok);
@@ -85,12 +99,28 @@ export const AuthProvider = ({ children }) => {
   const [isInitialized, setIsInitialized] = useState(!!storedAuth);
   const [loading, setLoading] = useState(!storedAuth);
 
+  // useEffect(() => {
+  //     const host = window.location.hostname;
+  //   if (PUBLIC_ROUTES.includes(location.pathname)) return;
+  //   // Only redirect if we have neither URL info nor stored info
+  //   if (!auth.user && !queryToken && process.env.NODE_ENV === "development") {
+  //     Navigate(`/?SV=0&token=QZ7KX8Z23ZT7MLQY`);
+  //   }
+  // }, [auth.user, queryToken, location.pathname, Navigate]);
+
   useEffect(() => {
     if (PUBLIC_ROUTES.includes(location.pathname)) return;
 
-    // Only redirect if we have neither URL info nor stored info
-    if (!auth.user && !queryToken && process.env.NODE_ENV === "development") {
-      Navigate(`/?SV=0&token=QZ7KX8Z23ZT7MLQY`);
+    const host = window.location.hostname;
+
+    const isLocal =
+      host === "localhost" ||
+      host === "127.0.0.1" ||
+      host === "optigocarely.web" ||
+      host === "optigocarely";
+
+    if (!auth.user && !queryToken && isLocal) {
+      Navigate("/?SV=0&token=QZ7KX8Z23ZT7MLQY", { replace: true });
     }
   }, [auth.user, queryToken, location.pathname, Navigate]);
 
@@ -110,7 +140,7 @@ export const AuthProvider = ({ children }) => {
           APP_USER_ID: credentials?.rd2[0]?.userid,
           VERSION_NO: service.VERSION_NO,
         },
-        service.SERVICE_NAME
+        service.SERVICE_NAME,
       );
       return true;
     } catch {
@@ -134,13 +164,15 @@ export const AuthProvider = ({ children }) => {
         setAuth({ user, token: res?.rd?.[0] });
 
         // Save to Persistent Storage
-        localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify({
-          user,
-          token: res?.rd?.[0], // Session token used for calls
-          inputToken: tk,       // Authorization token from URL/Original source
-          raw: res
-        }));
-
+        localStorage.setItem(
+          AUTH_STORAGE_KEY,
+          JSON.stringify({
+            user,
+            token: res?.rd?.[0], // Session token used for calls
+            inputToken: tk, // Authorization token from URL/Original source
+            raw: res,
+          }),
+        );
 
         return res;
       } else {
@@ -174,14 +206,14 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     const init = async () => {
       // If we have a token in URL, check if it's different from the token used to create the stored session
-      const hasNewUrlToken = queryToken && queryToken !== storedAuth?.inputToken;
+      const hasNewUrlToken =
+        queryToken && queryToken !== storedAuth?.inputToken;
 
       // If we're already initialized from storage and URL doesn't have a NEW token, we're done
       if (isInitialized && auth.user && !hasNewUrlToken) {
         setLoading(false);
         return;
       }
-
 
       try {
         const activeToken = queryToken || auth.token;
@@ -231,10 +263,10 @@ export const AuthProvider = ({ children }) => {
       HandleLogout,
       HandleDeleteAccount,
     }),
-    [auth, isInitialized, services, clearState]
+    [auth, isInitialized, services, clearState],
   );
 
-  if (!isInitialized || loading) return <Loader />;
+  if (!isInitialized || loading) return;
 
   if (!auth.user && !PUBLIC_ROUTES?.includes(location.pathname)) {
     return <></>;
@@ -295,8 +327,12 @@ const UnauthorizedScreen = () => {
           </Typography>
 
           {/* Description */}
-          <Typography variant="body2" sx={{ color: "text.secondary", lineHeight: 1.7 }}>
-            You don’t have permission to view this page. Please sign in with the correct account or return to the previous page.
+          <Typography
+            variant="body2"
+            sx={{ color: "text.secondary", lineHeight: 1.7 }}
+          >
+            You don’t have permission to view this page. Please sign in with the
+            correct account or return to the previous page.
           </Typography>
 
           {/* Actions (static UI only)

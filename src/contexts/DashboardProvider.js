@@ -1,23 +1,25 @@
 import { createContext, useCallback, useContext, useState, useEffect, useMemo, useRef } from "react";
 import CallLogApi from "../apis/CallLogApiController";
+import { useAuth } from "./AuthContext";
 
 const DashboardContext = createContext(null);
 
 export function DashboardProvider(props) {
   const [DashboardAnalytics, setDashboardAnalytics] = useState([]);
   const [loading, setLoading] = useState(true);
+  const { user, token } = useAuth();
 
   useEffect(() => {
     const fetchLogs = async () => {
       try {
         const res = await CallLogApi.getDashboardData();
-        const list =  res?.rd[0];
+        const list = res?.rd[0];
         setDashboardAnalytics(list);
       } catch (error) {
         console.log("🚀 ~ fetchLogs ~ error:", error);
       } finally {
         console.log("finally");
-      setLoading(false)
+        setLoading(false)
       }
     };
 
