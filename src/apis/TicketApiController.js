@@ -200,6 +200,46 @@ class TicketAPI extends BaseAPI {
     }
   }
 
+  
+  static async markNotificationRead({ NotificationId, CorpId }) {
+    try {
+      const params = {
+        NotificationId,
+        UserId: CorpId,
+      };
+      const response = await this.requestToApi({
+        mode: "noti_read",
+        params,
+        functionName: "noti_read",
+      });
+      return response;
+    } catch (error) {
+      console.error("Error marking notification as read:", error);
+      throw error;
+    }
+  }
+
+  static async getNotificationList({ Projectcode , page , pagesize  }) {
+    try {
+      const params = {
+        Projectcode: Projectcode ,
+          Page : page,
+        PageSize : pagesize
+      };
+
+      const response = await this.requestToApi({
+        mode: "noti_list",
+        params,
+        functionName: "Notification",
+      });
+
+      return response;
+    } catch (error) {
+      console.error("Error fetching notification list:", error);
+      throw error;
+    }
+  }
+  
   // Add a new project
   static async addProject({ projectCode, projectName }) {
     try {

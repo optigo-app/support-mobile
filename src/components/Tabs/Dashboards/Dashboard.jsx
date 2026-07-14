@@ -1,18 +1,19 @@
 import React from "react";
 import { HomeScrollArea } from "../../ui/ScrollArea";
-import { Box, Typography, Card, CardContent, List, ListItem, ListItemIcon, ListItemText, IconButton, Divider } from "@mui/material";
+import { Box, Typography, Card, Badge as BadgeBar, List, ListItem, ListItemIcon, ListItemText, IconButton, Divider } from "@mui/material";
 import { PhoneRounded, ConfirmationNumberRounded, ShoppingCartRounded, SchoolRounded, ChevronRightRounded, Badge } from "@mui/icons-material";
 import useCommonStore from "../../../store/CommonStore";
 import { Avatar } from "@mui/material";
 import { CiSearch as SearchRounded } from "react-icons/ci";
 import { Grid } from "@mui/material";
-import ArrowOutwardRoundedIcon from "@mui/icons-material/ArrowOutwardRounded";
 import PromotionCarousel from "./PromotionCarousel";
 import Hello from "./Hello";
 import { useAuth } from "../../../contexts/AuthContext";
 import { useDashboard } from "../../../contexts/DashboardProvider";
 import { useGreeting } from "../../../hooks/useGreeting";
 import DashboardSkeleton from "./DashboardSkeleton";
+import NotificationsActiveRoundedIcon from '@mui/icons-material/NotificationsActiveRounded';
+
 
 const initials = (user) => {
   return (user?.fullName || "")
@@ -163,15 +164,20 @@ const Dashboard = () => {
             </Box>
 
             {/* RIGHT: Search */}
-            {/* <IconButton
-              sx={{
-                width: { xs: 40, sm: 44 },
-                height: { xs: 40, sm: 44 },
-                bgcolor: "rgba(102, 126, 234, 0.1)",
-              }}
+            <BadgeBar badgeContent={5}
+              color="primary"
             >
-              <SearchRounded sx={{ fontSize: { xs: 20, sm: 22 }, color: "#667eea" }} />
-            </IconButton> */}
+              <IconButton
+                onClick={() => setTabId(6)}
+                sx={{
+                  width: { xs: 40, sm: 44 },
+                  height: { xs: 40, sm: 44 },
+                  bgcolor: "rgba(102, 126, 234, 0.1)",
+                }}
+              >
+                <NotificationsActiveRoundedIcon sx={{ fontSize: { xs: 20, sm: 22 }, color: "#667eea" }} />
+              </IconButton>
+            </BadgeBar>
           </Box>
         </Box>
 

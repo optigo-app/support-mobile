@@ -1,5 +1,22 @@
-import React, { useState, useMemo, useRef, useEffect, useCallback } from "react";
-import { Box, Typography, Avatar, Chip, ListItemButton, List, Badge, CircularProgress, IconButton } from "@mui/material";
+import React, {
+  useState,
+  useMemo,
+  useRef,
+  useEffect,
+  useCallback,
+} from "react";
+import { useSearchParams } from "react-router-dom";
+import {
+  Box,
+  Typography,
+  Avatar,
+  Chip,
+  ListItemButton,
+  List,
+  Badge,
+  CircularProgress,
+  IconButton,
+} from "@mui/material";
 import { MessageRounded as MessageRoundedIcon } from "@mui/icons-material";
 
 // --- Assumed Imports (Shared Components) ---
@@ -9,22 +26,50 @@ import GmailStyleHeader from "../../ui/Header";
 import TicketDetailView from "../Tickets/Details";
 import { CloseTicketModal } from "../../ui/CloseTicketModal";
 import { FullPageRating } from "../../ui/RatingModal";
-import { getStatusStyle, TICKET_FILTER_DEFINITIONS } from "../../../utils/FiltersOptions";
+import {
+  getStatusStyle,
+  TICKET_FILTER_DEFINITIONS,
+} from "../../../utils/FiltersOptions";
 import { useDynamicFilters } from "../../../hooks/useDynamicFilters";
 import { useTicket } from "./../../../contexts/useTicket";
-import { todayDate, yesterdayDate, thisMonthStart, thisMonthEnd, thisWeekStart, thisWeekEnd, formatRobustDate } from "../../../utils/dateFormatter";
+import {
+  todayDate,
+  yesterdayDate,
+  thisMonthStart,
+  thisMonthEnd,
+  thisWeekStart,
+  thisWeekEnd,
+  formatRobustDate,
+} from "../../../utils/dateFormatter";
 import { DataParser } from "../../../utils/ticketUtils";
 import { COLORS } from "../../../utils/Filtering";
 import NewUpdatePopup from "../../ui/NewUpdatePopover";
 import Loader from "../../ui/Loader";
+import TicketAPI from "../../../apis/TicketApiController";
 
 const TicketListApp = () => {
-  const { filterDefinitions, selectedFilters, totalFilters, toggleFilter, clearAllFilters } = useDynamicFilters(TICKET_FILTER_DEFINITIONS);
+  const {
+    filterDefinitions,
+    selectedFilters,
+    totalFilters,
+    toggleFilter,
+    clearAllFilters,
+  } = useDynamicFilters(TICKET_FILTER_DEFINITIONS);
   const [searchQuery, setSearchQuery] = useState("");
-  const { tickets, loadMore, hasMore, filters, updateFilters, isFetching, selectedTicket, setSelectedTicket, CloseTicket, AddFeedBackTicket,
+  const {
+    tickets,
+    loadMore,
+    hasMore,
+    filters,
+    updateFilters,
+    isFetching,
+    selectedTicket,
+    setSelectedTicket,
+    CloseTicket,
+    AddFeedBackTicket,
     hasNewUpdate,
     refreshTickets,
-    setHasNewUpdate
+    setHasNewUpdate,
   } = useTicket();
 
   const [anchorElSort, setAnchorElSort] = useState(false);
@@ -35,18 +80,118 @@ const TicketListApp = () => {
   const scrollRef = useRef(null);
   const isFirstRender = useRef(true);
 
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  useEffect(() => {
+    const ticketIdInUrl = searchParams.get("ticketId");
+    const rateInUrl = searchParams.get("rate") === "true";
+
+    if (ticketIdInUrl) {
+      const ticket = tickets.find(
+        (item) => String(item.TicketNo) === String(ticketIdInUrl),
+      );
+      if (ticket) {
+        if (selectedTicket?.TicketNo !== ticket.TicketNo) {
+          setSelectedTicket(ticket);
+          setIsDetailOpen(true);
+        }
+        if (rateInUrl) {
+          if (isRatingModalOpen !== ticket.TicketNo) {
+            setIsRatingModalOpen(ticket.TicketNo);
+          }
+        } else {
+          if (isRatingModalOpen !== null) {
+            setIsRatingModalOpen(null);
+          }
+        }
+      } else if (!isFetching && tickets.length > 0) {
+        const fetchAndSelect = async () => {
+          try {
+            const res = await TicketAPI.getTicketsList({
+              searchTerm: ticketIdInUrl,
+              pagesize: 1,
+            });
+            const found = res?.rd?.find(
+              (item) => String(item.TicketNo) === String(ticketIdInUrl),
+            );
+            if (found) {
+              setSelectedTicket(found);
+              setIsDetailOpen(true);
+              if (rateInUrl) {
+                setIsRatingModalOpen(found.TicketNo);
+              }
+            }
+          } catch (e) {
+            console.error(e);
+          }
+        };
+        fetchAndSelect();
+      }
+    } else {
+      if (isDetailOpen) {
+        setIsDetailOpen(false);
+        setSelectedTicket(null);
+      }
+      if (isRatingModalOpen !== null) {
+        setIsRatingModalOpen(null);
+      }
+    }
+  }, [searchParams, tickets, isFetching]);
+
   const options = useMemo(
     () => [
       { label: "all", Filter: "", StartDate: "", EndDate: "", ApiStatus: "" },
-      { label: "New", ApiStatus: "New", Filter: "", StartDate: "", EndDate: "" },
-      { label: "Closed Ticket", ApiStatus: "Close", Filter: "", StartDate: "", EndDate: "" },
-      { label: "Open Ticket", ApiStatus: "Open", Filter: "", StartDate: "", EndDate: "" },
-      { label: "today", Filter: "date", StartDate: todayDate, EndDate: todayDate, ApiStatus: "" },
-      { label: "yesterday", Filter: "date", StartDate: yesterdayDate, EndDate: yesterdayDate, ApiStatus: "" },
-      { label: "month", Filter: "date", StartDate: thisMonthStart, EndDate: thisMonthEnd, ApiStatus: "" },
-      { label: "week", Filter: "date", StartDate: thisWeekStart, EndDate: thisWeekEnd, ApiStatus: "" },
+      {
+        label: "New",
+        ApiStatus: "New",
+        Filter: "",
+        StartDate: "",
+        EndDate: "",
+      },
+      {
+        label: "Closed Ticket",
+        ApiStatus: "Close",
+        Filter: "",
+        StartDate: "",
+        EndDate: "",
+      },
+      {
+        label: "Open Ticket",
+        ApiStatus: "Open",
+        Filter: "",
+        StartDate: "",
+        EndDate: "",
+      },
+      {
+        label: "today",
+        Filter: "date",
+        StartDate: todayDate,
+        EndDate: todayDate,
+        ApiStatus: "",
+      },
+      {
+        label: "yesterday",
+        Filter: "date",
+        StartDate: yesterdayDate,
+        EndDate: yesterdayDate,
+        ApiStatus: "",
+      },
+      {
+        label: "month",
+        Filter: "date",
+        StartDate: thisMonthStart,
+        EndDate: thisMonthEnd,
+        ApiStatus: "",
+      },
+      {
+        label: "week",
+        Filter: "date",
+        StartDate: thisWeekStart,
+        EndDate: thisWeekEnd,
+        ApiStatus: "",
+      },
     ],
-    []
+    [],
   );
 
   useEffect(() => {
@@ -64,9 +209,14 @@ const TicketListApp = () => {
   const activeFilterLabel = useMemo(() => {
     const match = options.find((opt) => {
       // 1. Check Date & Type match
-      const isDateMatch = opt.Filter === filters.Filter && opt.StartDate === filters.StartDate && opt.EndDate === filters.EndDate;
+      const isDateMatch =
+        opt.Filter === filters.Filter &&
+        opt.StartDate === filters.StartDate &&
+        opt.EndDate === filters.EndDate;
 
-      const isApiStatusMatch = opt.ApiStatus ? filters.ApiStatus === opt.ApiStatus : !filters.ApiStatus;
+      const isApiStatusMatch = opt.ApiStatus
+        ? filters.ApiStatus === opt.ApiStatus
+        : !filters.ApiStatus;
 
       return isDateMatch && isApiStatusMatch;
     });
@@ -110,7 +260,8 @@ const TicketListApp = () => {
     const element = scrollRef.current;
     if (!element) return;
     const handleScroll = () => {
-      const isNearBottom = element.scrollHeight - element.scrollTop <= element.clientHeight + 200;
+      const isNearBottom =
+        element.scrollHeight - element.scrollTop <= element.clientHeight + 200;
       if (isNearBottom && hasMore && !isFetching) {
         loadMoreLogs();
       }
@@ -122,11 +273,32 @@ const TicketListApp = () => {
   const HandleOpenDetail = (row) => {
     setIsDetailOpen(true);
     setSelectedTicket(row);
+    const newParams = new URLSearchParams(searchParams);
+    newParams.set("ticketId", row.TicketNo.toString());
+    setSearchParams(newParams);
   };
 
   const HandleCloseDetail = () => {
     setIsDetailOpen(false);
     setSelectedTicket(null);
+    const newParams = new URLSearchParams(searchParams);
+    newParams.delete("ticketId");
+    newParams.delete("rate");
+    setSearchParams(newParams);
+  };
+
+  const handleRatingOpen = (ticketNo) => {
+    setIsRatingModalOpen(ticketNo);
+    const newParams = new URLSearchParams(searchParams);
+    newParams.set("rate", "true");
+    setSearchParams(newParams);
+  };
+
+  const handleRatingClose = () => {
+    setIsRatingModalOpen(null);
+    const newParams = new URLSearchParams(searchParams);
+    newParams.delete("rate");
+    setSearchParams(newParams);
   };
 
   const HandleCloseTicket = async () => {
@@ -159,7 +331,15 @@ const TicketListApp = () => {
 
   return (
     <>
-      <Box sx={{ display: "flex", flexDirection: "column", overflow: "hidden", bgcolor: "#fff", height: "100%" }}>
+      <Box
+        sx={{
+          display: "flex",
+          flexDirection: "column",
+          overflow: "hidden",
+          bgcolor: "#fff",
+          height: "100%",
+        }}
+      >
         {/* HEADER */}
         <GmailStyleHeader
           count={visibleLogs?.length}
@@ -179,18 +359,21 @@ const TicketListApp = () => {
         {/* SCROLL AREA */}
         <EmailScrollArea ref={scrollRef}>
           <NewUpdatePopup
-            Title={'Ticket'}
-            hasNewUpdate={hasNewUpdate} refreshCallLogs={refreshTickets} setHasNewUpdate={setHasNewUpdate}
+            Title={"Ticket"}
+            hasNewUpdate={hasNewUpdate}
+            refreshCallLogs={refreshTickets}
+            setHasNewUpdate={setHasNewUpdate}
           />
           {isFetching && visibleLogs?.length === 0 ? (
             <Loader />
           ) : visibleLogs?.length === 0 && !isFetching ? (
-            <Box sx={{ p: 5, textAlign: "center", color: COLORS.textSecondary }}>
+            <Box
+              sx={{ p: 5, textAlign: "center", color: COLORS.textSecondary }}
+            >
               <Typography variant="body2">No tickets found</Typography>
             </Box>
           ) : (
             <List disablePadding>
-
               {visibleLogs?.map((row) => {
                 const statusStyle = getStatusStyle(row?.Status);
                 const formatted = formatRobustDate(row?.CreatedOn);
@@ -225,7 +408,16 @@ const TicketListApp = () => {
                       }}
                     >
                       {/* Avatar Section */}
-                      <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 0.4, mt: 0.4, position: "relative" }}>
+                      <Box
+                        sx={{
+                          display: "flex",
+                          flexDirection: "column",
+                          alignItems: "center",
+                          gap: 0.4,
+                          mt: 0.4,
+                          position: "relative",
+                        }}
+                      >
                         <Badge
                           badgeContent={row?.isNewTicket ? 1 : 0}
                           color="primary"
@@ -235,7 +427,8 @@ const TicketListApp = () => {
                             "& .MuiBadge-badge": {
                               top: 5,
                               left: 2,
-                              border: (theme) => `2px solid ${(theme.vars ?? theme).palette.background.paper}`,
+                              border: (theme) =>
+                                `2px solid ${(theme.vars ?? theme).palette.background.paper}`,
                               padding: 0.5,
                               borderRadius: 25,
                             },
@@ -253,14 +446,22 @@ const TicketListApp = () => {
                               boxShadow: "0 1px 4px rgba(0,0,0,0.05)",
                             }}
                           >
-                            {row?.companyname ? row?.companyname?.charAt(0)?.toUpperCase() : "T"}
+                            {row?.companyname
+                              ? row?.companyname?.charAt(0)?.toUpperCase()
+                              : "T"}
                           </Avatar>
                         </Badge>
                       </Box>
 
                       {/* Content Section */}
                       <Box sx={{ flex: 1, minWidth: 0 }}>
-                        <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                        <Box
+                          sx={{
+                            display: "flex",
+                            justifyContent: "space-between",
+                            alignItems: "center",
+                          }}
+                        >
                           <Typography
                             sx={{
                               fontWeight: 600,
@@ -275,7 +476,15 @@ const TicketListApp = () => {
                           >
                             {row?.subject}
                           </Typography>
-                          <Typography sx={{ color: COLORS.textSecondary, fontSize: "0.75rem", whiteSpace: "nowrap" }}>{formatted?.smart}</Typography>
+                          <Typography
+                            sx={{
+                              color: COLORS.textSecondary,
+                              fontSize: "0.75rem",
+                              whiteSpace: "nowrap",
+                            }}
+                          >
+                            {formatted?.smart}
+                          </Typography>
                         </Box>
 
                         {/* <Typography
@@ -306,16 +515,35 @@ const TicketListApp = () => {
                             textOverflow: "ellipsis",
                           }}
                         >
-                          {(data[0]?.message && data[0]?.message !== "null" && data[0]?.message?.trim() !== "") ? data[0]?.message : "No Description"}
+                          {data[0]?.message &&
+                          data[0]?.message !== "null" &&
+                          data[0]?.message?.trim() !== ""
+                            ? data[0]?.message
+                            : "No Description"}
                         </Typography>
 
-                        <Box sx={{ mt: 0.6, display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%" }}>
-                          <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.8 }}>
+                        <Box
+                          sx={{
+                            mt: 0.6,
+                            display: "flex",
+                            justifyContent: "space-between",
+                            alignItems: "center",
+                            width: "100%",
+                          }}
+                        >
+                          <Box
+                            sx={{ display: "flex", flexWrap: "wrap", gap: 0.8 }}
+                          >
                             {row?.Status && (
                               <Chip
                                 label={row?.Status}
                                 size="small"
-                                icon={React.cloneElement(statusStyle.icon, { style: { fontSize: "12px", marginRight: "0px" } })}
+                                icon={React.cloneElement(statusStyle.icon, {
+                                  style: {
+                                    fontSize: "12px",
+                                    marginRight: "0px",
+                                  },
+                                })}
                                 sx={{
                                   height: 22,
                                   fontSize: "0.70rem",
@@ -358,7 +586,15 @@ const TicketListApp = () => {
                                 label={row?.CreatedBy}
                                 size="small"
                                 avatar={
-                                  <Avatar sx={{ width: 18, height: 18, fontSize: "0.6rem", bgcolor: '#EC4899', color: '#fff' }}>
+                                  <Avatar
+                                    sx={{
+                                      width: 18,
+                                      height: 18,
+                                      fontSize: "0.6rem",
+                                      bgcolor: "#EC4899",
+                                      color: "#fff",
+                                    }}
+                                  >
                                     {row?.CreatedBy?.charAt(0)?.toUpperCase()}
                                   </Avatar>
                                 }
@@ -366,15 +602,15 @@ const TicketListApp = () => {
                                   height: 22,
                                   fontSize: "0.70rem",
                                   fontWeight: 600,
-                                  bgcolor: '#f3f3f3',
-                                  color: '#666',
-                                  border: '1px solid #e8e8e8',
+                                  bgcolor: "#f3f3f3",
+                                  color: "#666",
+                                  border: "1px solid #e8e8e8",
                                   maxWidth: "120px",
                                   "& .MuiChip-avatar": {
                                     width: 18,
                                     height: 18,
                                     marginLeft: "2px",
-                                    color: '#fff',
+                                    color: "#fff",
                                   },
                                   "& .MuiChip-label": {
                                     paddingLeft: "6px",
@@ -402,10 +638,19 @@ const TicketListApp = () => {
                               badgeContent={length || 0}
                               color="primary"
                               sx={{
-                                "& .MuiBadge-badge": { fontSize: "0.5rem", height: 12, minWidth: 12, px: 0.3, top: -2, right: -2 },
+                                "& .MuiBadge-badge": {
+                                  fontSize: "0.5rem",
+                                  height: 12,
+                                  minWidth: 12,
+                                  px: 0.3,
+                                  top: -2,
+                                  right: -2,
+                                },
                               }}
                             >
-                              <MessageRoundedIcon sx={{ fontSize: 12, color: "#444" }} />
+                              <MessageRoundedIcon
+                                sx={{ fontSize: 12, color: "#444" }}
+                              />
                             </Badge>
                           </IconButton>
                         </Box>
@@ -422,18 +667,54 @@ const TicketListApp = () => {
               )}
 
               {!hasMore && visibleLogs?.length > 0 && (
-                <Box sx={{ p: 2, textAlign: "center", color: COLORS.textSecondary }}>
-                  <Typography variant="caption">All tickets loaded ({visibleLogs?.length})</Typography>
+                <Box
+                  sx={{
+                    p: 2,
+                    textAlign: "center",
+                    color: COLORS.textSecondary,
+                  }}
+                >
+                  <Typography variant="caption">
+                    All tickets loaded ({visibleLogs?.length})
+                  </Typography>
                 </Box>
               )}
             </List>
           )}
         </EmailScrollArea>
       </Box>
-      <CloseTicketModal selectedTicket={selectedTicket} open={isCloseModalOpen} onClose={() => setIsCloseModalOpen(false)} onConfirm={HandleCloseTicket} />
-      <FullPageRating open={isRatingModalOpen} onClose={() => setIsRatingModalOpen(null)} onSubmit={HandleFeedbackTicket} onConfirm={() => setIsRatingModalOpen(null)} />
-      <TicketFilterDrawer onClose={() => setAnchorElSort(false)} open={anchorElSort} title="Filter Tickets" filterDefinitions={filterDefinitions} selectedFilters={selectedFilters} onToggleFilter={toggleFilter} onClearAll={clearAllFilters} totalFilters={totalFilters} onApply={() => setAnchorElSort(false)} />
-      <TicketDetailView key={selectedTicket?.TicketNo} onCloseRatingOpen={() => setIsRatingModalOpen(selectedTicket?.TicketNo)} onCloseTicketOpen={() => setIsCloseModalOpen(true)} open={isDetailOpen} onClose={HandleCloseDetail} onBack={HandleCloseDetail} data={selectedTicket} />
+      <CloseTicketModal
+        selectedTicket={selectedTicket}
+        open={isCloseModalOpen}
+        onClose={() => setIsCloseModalOpen(false)}
+        onConfirm={HandleCloseTicket}
+      />
+      <FullPageRating
+        open={isRatingModalOpen}
+        onClose={handleRatingClose}
+        onSubmit={HandleFeedbackTicket}
+        onConfirm={handleRatingClose}
+      />
+      <TicketFilterDrawer
+        onClose={() => setAnchorElSort(false)}
+        open={anchorElSort}
+        title="Filter Tickets"
+        filterDefinitions={filterDefinitions}
+        selectedFilters={selectedFilters}
+        onToggleFilter={toggleFilter}
+        onClearAll={clearAllFilters}
+        totalFilters={totalFilters}
+        onApply={() => setAnchorElSort(false)}
+      />
+      <TicketDetailView
+        key={selectedTicket?.TicketNo}
+        onCloseRatingOpen={handleRatingOpen}
+        onCloseTicketOpen={() => setIsCloseModalOpen(true)}
+        open={isDetailOpen}
+        onClose={HandleCloseDetail}
+        onBack={HandleCloseDetail}
+        data={selectedTicket}
+      />
     </>
   );
 };

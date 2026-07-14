@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useRef, useEffect, useCallback } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Box, Typography, Avatar, Chip, ListItemButton, List, CircularProgress } from "@mui/material";
 import { CallReceivedRounded, CallMadeRounded } from "@mui/icons-material";
 import { EmailScrollArea } from "../../ui/ScrollArea";
@@ -14,6 +15,7 @@ import { FullPageRating } from "../../ui/RatingModal";
 import EmptyLogsState from "../../ui/Fallback";
 import NewUpdatePopup from '../../ui/NewUpdatePopover'
 import Loader from "../../ui/Loader";
+import CallLogApi from "../../../apis/CallLogApiController";
 
 const CALL_TYPE_STYLES = {
   "": { bg: "#EFF6FF", color: "#3B82F6", icon: <CallReceivedRounded /> },
@@ -31,6 +33,51 @@ const CallLogsApp = () => {
   const [selectedLog, setSelectedLog] = useState(null);
   const [isRatingModalOpen, setIsRatingModalOpen] = useState(false);
   const scrollRef = useRef(null);
+
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  useEffect(() => {
+    const callIdInUrl = searchParams.get("callId");
+    const rateInUrl = searchParams.get("rate") === "true";
+
+    if (callIdInUrl) {
+      const log = callLog.find((item) => String(item.sr) === String(callIdInUrl));
+      if (log) {
+        if (selectedLog?.sr !== log.sr) {
+          setSelectedLog(log);
+          setOpen(true);
+        }
+        if (isRatingModalOpen !== rateInUrl) {
+          setIsRatingModalOpen(rateInUrl);
+        }
+      } else if (!isFetching && callLog.length > 0) {
+        const fetchAndSelect = async () => {
+          try {
+            const res = await CallLogApi.getCallLogs({ searchTerm: callIdInUrl, pageSize: 1 });
+            const found = res?.rd?.find(item => String(item.sr) === String(callIdInUrl));
+            if (found) {
+              setSelectedLog(found);
+              setOpen(true);
+              if (rateInUrl) {
+                setIsRatingModalOpen(true);
+              }
+            }
+          } catch (e) {
+            console.error(e);
+          }
+        };
+        fetchAndSelect();
+      }
+    } else {
+      if (open) {
+        setOpen(false);
+        setSelectedLog(null);
+      }
+      if (isRatingModalOpen) {
+        setIsRatingModalOpen(false);
+      }
+    }
+  }, [searchParams, callLog, isFetching]);
 
   const { filterDefinitions, selectedFilters, totalFilters, toggleFilter, clearAllFilters } = useDynamicFilters(CALL_LOG_FILTER_DEFINITIONS);
   const isFirstRender = useRef(true);
@@ -126,17 +173,38 @@ const CallLogsApp = () => {
   const handleOpenDrawer = (log) => {
     setSelectedLog(log);
     setOpen(true);
+    const newParams = new URLSearchParams(searchParams);
+    newParams.set("callId", log.sr.toString());
+    setSearchParams(newParams);
   };
   const handleCloseDrawer = () => {
     setOpen(false);
     setSelectedLog(null);
+    const newParams = new URLSearchParams(searchParams);
+    newParams.delete("callId");
+    newParams.delete("rate");
+    setSearchParams(newParams);
+  };
+
+  const handleRatingOpen = (id) => {
+    setIsRatingModalOpen(true);
+    const newParams = new URLSearchParams(searchParams);
+    newParams.set("rate", "true");
+    setSearchParams(newParams);
+  };
+
+  const handleRatingClose = () => {
+    setIsRatingModalOpen(false);
+    const newParams = new URLSearchParams(searchParams);
+    newParams.delete("rate");
+    setSearchParams(newParams);
   };
 
   const HandleRatingSubmit = async (id, feedback, rating) => {
     try {
       const res = await addFeedback(id, feedback, rating);
       if (res?.rd?.[0]?.stat_msg === "The rating has been updated successfully.") {
-        setIsRatingModalOpen(false);
+        handleRatingClose();
         handleCloseDrawer();
       }
     } catch (error) {
@@ -274,8 +342,8 @@ const CallLogsApp = () => {
 
       <FilterDrawer onClose={() => setAnchorElSort(false)} open={anchorElSort} title="Filter Logs" filterDefinitions={filterDefinitions} selectedFilters={selectedFilters} onToggleFilter={toggleFilter} onClearAll={clearAllFilters} totalFilters={totalFilters} onApply={() => setAnchorElSort(false)} />
 
-      <CallLogDetailPage onCloseRatingOpen={setIsRatingModalOpen} open={open} onClose={handleCloseDrawer} onBack={handleCloseDrawer} logData={selectedLog} />
-      <FullPageRating open={isRatingModalOpen} onClose={() => setIsRatingModalOpen(false)} onConfirm={() => setIsRatingModalOpen(false)} onSubmit={HandleRatingSubmit} Call={true} />
+      <CallLogDetailPage onCloseRatingOpen={handleRatingOpen} open={open} onClose={handleCloseDrawer} onBack={handleCloseDrawer} logData={selectedLog} />
+      <FullPageRating open={isRatingModalOpen} onClose={handleRatingClose} onConfirm={handleRatingClose} onSubmit={HandleRatingSubmit} Call={true} />
     </Box>
   );
 };

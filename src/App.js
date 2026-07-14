@@ -25,6 +25,11 @@ const SupportMobile = () => {
       // 2. Store changed (e.g. UI click) -> Update URL
       const newParams = new URLSearchParams(searchParams);
       newParams.set("tab", tabId.toString());
+      if (tabId !== 1) newParams.delete("callId");
+      if (tabId !== 2) newParams.delete("ticketId");
+      if (tabId !== 3) newParams.delete("orderId");
+      if (tabId !== 4) newParams.delete("trainingId");
+      newParams.delete("rate");
       setSearchParams(newParams);
       lastSyncedTabId.current = tabId;
     } else if (tabInUrl === null) {

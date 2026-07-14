@@ -1,16 +1,47 @@
-import React, { useState, useMemo, useRef, useEffect, useCallback } from "react"; // ADDED useEffect
-import { Box, Typography, Avatar, Chip, ListItemButton, List, CircularProgress } from "@mui/material"; // ADDED CircularProgress
-import { LocalShippingRounded, Inventory2Rounded, CancelRounded, CheckCircleRounded, CreditCardRounded, AttachMoneyRounded } from "@mui/icons-material";
+import React, {
+  useState,
+  useMemo,
+  useRef,
+  useEffect,
+  useCallback,
+} from "react"; // ADDED useEffect
+import { useSearchParams } from "react-router-dom";
+import {
+  Box,
+  Typography,
+  Avatar,
+  Chip,
+  ListItemButton,
+  List,
+  CircularProgress,
+} from "@mui/material"; // ADDED CircularProgress
+import {
+  LocalShippingRounded,
+  Inventory2Rounded,
+  CancelRounded,
+  CheckCircleRounded,
+  CreditCardRounded,
+  AttachMoneyRounded,
+} from "@mui/icons-material";
 import { EmailScrollArea } from "../../ui/ScrollArea";
 import TicketFilterDrawer from "../../ui/TicketFilterDrawer";
 import GmailStyleHeader from "../../ui/Header";
 import { ORDER_FILTER_DEFINITIONS } from "../../../utils/FiltersOptions";
 import { useDynamicFilters } from "../../../hooks/useDynamicFilters";
 import { useDelivery } from "../../../contexts/DeliveryProvider";
-import { formatRobustDate, todayDate, yesterdayDate, thisMonthStart, thisMonthEnd, thisWeekStart, thisWeekEnd } from "../../../utils/dateFormatter";
+import {
+  formatRobustDate,
+  todayDate,
+  yesterdayDate,
+  thisMonthStart,
+  thisMonthEnd,
+  thisWeekStart,
+  thisWeekEnd,
+} from "../../../utils/dateFormatter";
 import OrderDetailPage from "./detail";
 import { FullPageRating } from "../../ui/RatingModal";
 import Loader from "../../ui/Loader";
+import DeliveryAPI from "../../../apis/DeliveryController";
 
 const COLORS = {
   textPrimary: "#1A1A1A",
@@ -29,7 +60,13 @@ const COLORS = {
 };
 
 function getAvatarGradient(id) {
-  const gradients = ["linear-gradient(135deg, #11998e 0%, #38ef7d 100%)", "linear-gradient(135deg, #FC466B 0%, #3F5EFB 100%)", "linear-gradient(135deg, #ee0979 0%, #ff6a00 100%)", "linear-gradient(135deg, #8E2DE2 0%, #4A00E0 100%)", "linear-gradient(135deg, #00b09b 0%, #96c93d 100%)"];
+  const gradients = [
+    "linear-gradient(135deg, #11998e 0%, #38ef7d 100%)",
+    "linear-gradient(135deg, #FC466B 0%, #3F5EFB 100%)",
+    "linear-gradient(135deg, #ee0979 0%, #ff6a00 100%)",
+    "linear-gradient(135deg, #8E2DE2 0%, #4A00E0 100%)",
+    "linear-gradient(135deg, #00b09b 0%, #96c93d 100%)",
+  ];
   const index = parseInt(id, 10) % gradients?.length;
   return gradients[index];
 }
@@ -37,21 +74,56 @@ function getAvatarGradient(id) {
 function getStatusStyle(status) {
   switch (status) {
     case "Delivered":
-      return { bg: COLORS.successBg, color: COLORS.successText, icon: <CheckCircleRounded sx={{ fontSize: 14 }} /> };
+      return {
+        bg: COLORS.successBg,
+        color: COLORS.successText,
+        icon: <CheckCircleRounded sx={{ fontSize: 14 }} />,
+      };
     case "Shipped":
-      return { bg: COLORS.processBg, color: COLORS.processText, icon: <LocalShippingRounded sx={{ fontSize: 14 }} /> };
+      return {
+        bg: COLORS.processBg,
+        color: COLORS.processText,
+        icon: <LocalShippingRounded sx={{ fontSize: 14 }} />,
+      };
     case "Processing":
-      return { bg: COLORS.warnBg, color: COLORS.warnText, icon: <Inventory2Rounded sx={{ fontSize: 14 }} /> };
+      return {
+        bg: COLORS.warnBg,
+        color: COLORS.warnText,
+        icon: <Inventory2Rounded sx={{ fontSize: 14 }} />,
+      };
     case "Cancelled":
-      return { bg: COLORS.errorBg, color: COLORS.errorText, icon: <CancelRounded sx={{ fontSize: 14 }} /> };
+      return {
+        bg: COLORS.errorBg,
+        color: COLORS.errorText,
+        icon: <CancelRounded sx={{ fontSize: 14 }} />,
+      };
     default:
-      return { bg: COLORS.neutralBg, color: COLORS.neutralText, icon: <Inventory2Rounded sx={{ fontSize: 14 }} /> };
+      return {
+        bg: COLORS.neutralBg,
+        color: COLORS.neutralText,
+        icon: <Inventory2Rounded sx={{ fontSize: 14 }} />,
+      };
   }
 }
 
 const OrderDashboardApp = () => {
-  const { deliveryData, loadMore, hasMore, isFetching, updateFilters, filters, AddFeedBack, refreshDeliveryData } = useDelivery();
-  const { filterDefinitions, selectedFilters, totalFilters, toggleFilter, clearAllFilters } = useDynamicFilters(ORDER_FILTER_DEFINITIONS);
+  const {
+    deliveryData,
+    loadMore,
+    hasMore,
+    isFetching,
+    updateFilters,
+    filters,
+    AddFeedBack,
+    refreshDeliveryData,
+  } = useDelivery();
+  const {
+    filterDefinitions,
+    selectedFilters,
+    totalFilters,
+    toggleFilter,
+    clearAllFilters,
+  } = useDynamicFilters(ORDER_FILTER_DEFINITIONS);
   const [searchQuery, setSearchQuery] = useState("");
 
   const [anchorElSort, setAnchorElSort] = useState(false);
@@ -61,27 +133,135 @@ const OrderDashboardApp = () => {
   const [selectedLog, setSelectedLog] = useState(null);
   const [isRatingModalOpen, setIsRatingModalOpen] = useState(false);
 
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  useEffect(() => {
+    const orderIdInUrl = searchParams.get("orderId");
+    const rateInUrl = searchParams.get("rate") === "true";
+
+    if (orderIdInUrl) {
+      const order = deliveryData.find(
+        (item) => String(item.OrderNo) === String(orderIdInUrl),
+      );
+      if (order) {
+        if (selectedLog?.OrderNo !== order.OrderNo) {
+          setSelectedLog(order);
+          setOpen(true);
+        }
+        if (isRatingModalOpen !== rateInUrl) {
+          setIsRatingModalOpen(rateInUrl);
+        }
+      } else if (!isFetching && deliveryData.length > 0) {
+        const fetchAndSelect = async () => {
+          try {
+            const res = await DeliveryAPI.getDeliveryList({
+              SearchTerm: orderIdInUrl,
+              PageSize: 1,
+            });
+            const found = res?.Data?.rd?.find(
+              (item) => String(item.OrderNo) === String(orderIdInUrl),
+            );
+            if (found) {
+              setSelectedLog(found);
+              setOpen(true);
+              if (rateInUrl) {
+                setIsRatingModalOpen(true);
+              }
+            }
+          } catch (e) {
+            console.error(e);
+          }
+        };
+        fetchAndSelect();
+      }
+    } else {
+      if (open) {
+        setOpen(false);
+        setSelectedLog(null);
+      }
+      if (isRatingModalOpen) {
+        setIsRatingModalOpen(false);
+      }
+    }
+  }, [searchParams, deliveryData, isFetching]);
+
   const options = useMemo(
     () => [
       { label: "all", Filter: "", StartDate: "", EndDate: "" },
 
       // Status Filters (Filter is empty string, treated as Main Status)
-      { label: "Delivered", Filter: "", StartDate: "", EndDate: "", value: "Delivered" },
-      { label: "Pending", Filter: "", StartDate: "", EndDate: "", value: "Pending" },
-      { label: "Running", Filter: "", StartDate: "", EndDate: "", value: "Running" },
+      {
+        label: "Delivered",
+        Filter: "",
+        StartDate: "",
+        EndDate: "",
+        value: "Delivered",
+      },
+      {
+        label: "Pending",
+        Filter: "",
+        StartDate: "",
+        EndDate: "",
+        value: "Pending",
+      },
+      {
+        label: "Running",
+        Filter: "",
+        StartDate: "",
+        EndDate: "",
+        value: "Running",
+      },
 
       // Date Filters
-      { label: "today", Filter: "date", StartDate: todayDate, EndDate: todayDate },
-      { label: "yesterday", Filter: "date", StartDate: yesterdayDate, EndDate: yesterdayDate },
-      { label: "month", Filter: "date", StartDate: thisMonthStart, EndDate: thisMonthEnd },
-      { label: "week", Filter: "date", StartDate: thisWeekStart, EndDate: thisWeekEnd },
+      {
+        label: "today",
+        Filter: "date",
+        StartDate: todayDate,
+        EndDate: todayDate,
+      },
+      {
+        label: "yesterday",
+        Filter: "date",
+        StartDate: yesterdayDate,
+        EndDate: yesterdayDate,
+      },
+      {
+        label: "month",
+        Filter: "date",
+        StartDate: thisMonthStart,
+        EndDate: thisMonthEnd,
+      },
+      {
+        label: "week",
+        Filter: "date",
+        StartDate: thisWeekStart,
+        EndDate: thisWeekEnd,
+      },
 
       // Approval Status Filters (Changed Filter from 'trainingType' to 'approvalStatus')
-      { label: "Approval Pending", Filter: "approvalStatus", StartDate: "", EndDate: "", value: "Pending" },
-      { label: "Approved", Filter: "approvalStatus", StartDate: "", EndDate: "", value: "Approved" },
-      { label: "Rejected", Filter: "approvalStatus", StartDate: "", EndDate: "", value: "Rejected" },
+      {
+        label: "Approval Pending",
+        Filter: "approvalStatus",
+        StartDate: "",
+        EndDate: "",
+        value: "Pending",
+      },
+      {
+        label: "Approved",
+        Filter: "approvalStatus",
+        StartDate: "",
+        EndDate: "",
+        value: "Approved",
+      },
+      {
+        label: "Rejected",
+        Filter: "approvalStatus",
+        StartDate: "",
+        EndDate: "",
+        value: "Rejected",
+      },
     ],
-    []
+    [],
   );
 
   useEffect(() => {
@@ -96,7 +276,6 @@ const OrderDashboardApp = () => {
     return () => clearTimeout(delayDebounceFn);
   }, [searchQuery]);
 
-
   const visibleLogs = deliveryData;
 
   // --- INFINITE SCROLL IMPLEMENTATION ---
@@ -109,7 +288,8 @@ const OrderDashboardApp = () => {
     const element = scrollRef.current;
     if (!element) return;
     const handleScroll = () => {
-      const isNearBottom = element.scrollHeight - element.scrollTop <= element.clientHeight + 200;
+      const isNearBottom =
+        element.scrollHeight - element.scrollTop <= element.clientHeight + 200;
       if (isNearBottom && hasMore && !isFetching) {
         loadMoreOrders();
       }
@@ -118,15 +298,12 @@ const OrderDashboardApp = () => {
     return () => element.removeEventListener("scroll", handleScroll);
   }, [loadMoreOrders, hasMore, isFetching]);
 
-
   const activeFilterLabel = useMemo(() => {
     const match = options.find((opt) => {
-
       // 1. Date Match
       if (opt.Filter === "date") {
         return (
-          filters.StartDate === opt.StartDate &&
-          filters.EndDate === opt.EndDate
+          filters.StartDate === opt.StartDate && filters.EndDate === opt.EndDate
         );
       }
 
@@ -164,19 +341,17 @@ const OrderDashboardApp = () => {
       StartDate: StartDate || "",
       EndDate: EndDate || "",
       Filter: Filter === "date" ? "date" : "",
-      Status: "",        // Main Order Status
-      statusId: "",      // Helper for UI/API if needed
-      ApprovedStatus: "" // Specific for Approval Logic
+      Status: "", // Main Order Status
+      statusId: "", // Helper for UI/API if needed
+      ApprovedStatus: "", // Specific for Approval Logic
     };
 
     // 2. Assign values based on the specific Filter type
     if (label === "all") {
       // Do nothing, everything is already reset
-    }
-    else if (Filter === "approvalStatus") {
+    } else if (Filter === "approvalStatus") {
       targetState.ApprovedStatus = value;
-    }
-    else if (value && !Filter) {
+    } else if (value && !Filter) {
       targetState.Status = value;
       targetState.statusId = value;
     }
@@ -186,30 +361,48 @@ const OrderDashboardApp = () => {
   const handleOpenDrawer = (log) => {
     setSelectedLog(log);
     setOpen(true);
+    const newParams = new URLSearchParams(searchParams);
+    newParams.set("orderId", log.OrderNo.toString());
+    setSearchParams(newParams);
   };
-  
+
   const handleCloseDrawer = () => {
     setOpen(false);
     setSelectedLog(null);
+    const newParams = new URLSearchParams(searchParams);
+    newParams.delete("orderId");
+    newParams.delete("rate");
+    setSearchParams(newParams);
   };
 
-  const HandleRatingSubmit = async (id,rating,remark) => {
-   try {
-      const res = await AddFeedBack(
-        id,
-        rating,
-        remark
-      );
+  const handleRatingOpen = (orderNo) => {
+    setIsRatingModalOpen(true);
+    const newParams = new URLSearchParams(searchParams);
+    newParams.set("rate", "true");
+    setSearchParams(newParams);
+  };
+
+  const handleRatingClose = () => {
+    setIsRatingModalOpen(false);
+    const newParams = new URLSearchParams(searchParams);
+    newParams.delete("rate");
+    setSearchParams(newParams);
+  };
+
+  const HandleRatingSubmit = async (id, rating, remark) => {
+    try {
+      const res = await AddFeedBack(id, rating, remark);
       if (res) {
-        setIsRatingModalOpen(false);
+        handleRatingClose();
+        handleCloseDrawer();
       } else {
-        setIsRatingModalOpen(false);
+        handleRatingClose();
+        handleCloseDrawer();
       }
     } catch (error) {
       console.log(error);
     }
-  }
-
+  };
 
   return (
     <>
@@ -241,13 +434,16 @@ const OrderDashboardApp = () => {
           {isFetching && visibleLogs?.length === 0 ? (
             <Loader />
           ) : visibleLogs?.length === 0 && !isFetching ? (
-            <Box sx={{ p: 5, textAlign: "center", color: COLORS.textSecondary }}>
+            <Box
+              sx={{ p: 5, textAlign: "center", color: COLORS.textSecondary }}
+            >
               <Typography variant="h6">No orders found</Typography>
-              <Typography variant="body2">Clear search or adjust filters</Typography>
+              <Typography variant="body2">
+                Clear search or adjust filters
+              </Typography>
             </Box>
           ) : (
             <List disablePadding>
-
               {visibleLogs?.map((order, i) => {
                 const statusStyle = getStatusStyle(order?.status);
                 const date = formatRobustDate(order?.Date);
@@ -282,14 +478,20 @@ const OrderDashboardApp = () => {
                           justifyContent: "center",
                           alignItems: "center",
                           lineHeight: 1,
-                          fontSize: '0.96rem'
+                          fontSize: "0.96rem",
                         }}
                       >
                         {order?.SrNo}
                       </Avatar>
 
                       <Box sx={{ flex: 1, minWidth: 0 }}>
-                        <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                        <Box
+                          sx={{
+                            display: "flex",
+                            justifyContent: "space-between",
+                            alignItems: "center",
+                          }}
+                        >
                           <Typography
                             sx={{
                               fontWeight: 600,
@@ -356,44 +558,60 @@ const OrderDashboardApp = () => {
                           }}
                         >
                           {/* Payment Status */}
-                          {!!order?.PaymentStatus && <Chip
-                            size="small"
-                            label={order?.PaymentStatus}
-                            icon={order?.PaymentStatus === "Paid" ? <CheckCircleRounded /> : <CreditCardRounded />}
-                            sx={{
-                              height: 20,
-                              fontSize: "0.65rem",
-                              fontWeight: 600,
-                              borderRadius: 2,
-                              bgcolor: order?.PaymentStatus === "Paid" ? "rgba(52,199,89,0.15)" : "rgba(0,0,0,0.06)",
-                              color: order?.PaymentStatus === "Paid" ? "#1e7a3c" : "#666",
-                              "& .MuiChip-icon": {
-                                fontSize: 12,
-                                ml: "3px",
-                                color: "inherit",
-                              },
-                            }}
-                          />}
+                          {!!order?.PaymentStatus && (
+                            <Chip
+                              size="small"
+                              label={order?.PaymentStatus}
+                              icon={
+                                order?.PaymentStatus === "Paid" ? (
+                                  <CheckCircleRounded />
+                                ) : (
+                                  <CreditCardRounded />
+                                )
+                              }
+                              sx={{
+                                height: 20,
+                                fontSize: "0.65rem",
+                                fontWeight: 600,
+                                borderRadius: 2,
+                                bgcolor:
+                                  order?.PaymentStatus === "Paid"
+                                    ? "rgba(52,199,89,0.15)"
+                                    : "rgba(0,0,0,0.06)",
+                                color:
+                                  order?.PaymentStatus === "Paid"
+                                    ? "#1e7a3c"
+                                    : "#666",
+                                "& .MuiChip-icon": {
+                                  fontSize: 12,
+                                  ml: "3px",
+                                  color: "inherit",
+                                },
+                              }}
+                            />
+                          )}
 
                           {/* Order Status Chip */}
-                          {!!order?.Status && <Chip
-                            icon={statusStyle.icon}
-                            label={order?.Status}
-                            size="small"
-                            sx={{
-                              height: 20,
-                              fontSize: "0.65rem",
-                              fontWeight: 700,
-                              borderRadius: 25,
-                              bgcolor: statusStyle.bg,
-                              color: statusStyle.color,
-                              "& .MuiChip-icon": {
-                                fontSize: 13,
-                                ml: "3px",
+                          {!!order?.Status && (
+                            <Chip
+                              icon={statusStyle.icon}
+                              label={order?.Status}
+                              size="small"
+                              sx={{
+                                height: 20,
+                                fontSize: "0.65rem",
+                                fontWeight: 700,
+                                borderRadius: 25,
+                                bgcolor: statusStyle.bg,
                                 color: statusStyle.color,
-                              },
-                            }}
-                          />}
+                                "& .MuiChip-icon": {
+                                  fontSize: 13,
+                                  ml: "3px",
+                                  color: statusStyle.color,
+                                },
+                              }}
+                            />
+                          )}
                         </Box>
                       </Box>
                     </ListItemButton>
@@ -406,26 +624,45 @@ const OrderDashboardApp = () => {
                 </Box>
               )}
               {!hasMore && visibleLogs?.length > 0 && (
-                <Box sx={{ p: 2, textAlign: "center", color: COLORS.textSecondary }}>
-                  <Typography variant="caption">All orders loaded ({visibleLogs?.length})</Typography>
+                <Box
+                  sx={{
+                    p: 2,
+                    textAlign: "center",
+                    color: COLORS.textSecondary,
+                  }}
+                >
+                  <Typography variant="caption">
+                    All orders loaded ({visibleLogs?.length})
+                  </Typography>
                 </Box>
               )}
             </List>
           )}
         </EmailScrollArea>
-        <TicketFilterDrawer onClose={() => setAnchorElSort(false)} open={anchorElSort} title="Filter Orders" filterDefinitions={filterDefinitions} selectedFilters={selectedFilters} onToggleFilter={toggleFilter} onClearAll={clearAllFilters} totalFilters={totalFilters} onApply={() => setAnchorElSort(false)} />
+        <TicketFilterDrawer
+          onClose={() => setAnchorElSort(false)}
+          open={anchorElSort}
+          title="Filter Orders"
+          filterDefinitions={filterDefinitions}
+          selectedFilters={selectedFilters}
+          onToggleFilter={toggleFilter}
+          onClearAll={clearAllFilters}
+          totalFilters={totalFilters}
+          onApply={() => setAnchorElSort(false)}
+        />
         <OrderDetailPage
-          onCloseRatingOpen={setIsRatingModalOpen}
-          open={open} onClose={handleCloseDrawer}
+          onCloseRatingOpen={handleRatingOpen}
+          open={open}
+          onClose={handleCloseDrawer}
           logData={selectedLog}
         />
         <FullPageRating
-         open={isRatingModalOpen}
-          onClose={() => setIsRatingModalOpen(null)} onConfirm={() => setIsRatingModalOpen(null)}
+          open={isRatingModalOpen}
+          onClose={handleRatingClose}
+          onConfirm={handleRatingClose}
           title={"Order No " + selectedLog?.OrderNo}
           onSubmit={HandleRatingSubmit}
         />
-
       </Box>
     </>
   );

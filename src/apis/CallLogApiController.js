@@ -73,6 +73,7 @@ class CallLogApi extends BaseAPI {
       throw error;
     }
   }
+
   static async getEmployeeMasterD() {
     try {
       const params = {};

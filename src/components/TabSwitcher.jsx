@@ -8,6 +8,7 @@ import Calllog from "./Tabs/Callogs/CallLog";
 import Tickets from "./Tabs/Tickets/TicketList";
 import Orders from "./Tabs/Orders/index";
 import Training from "./Tabs/Training/index";
+import NotificationPage from "./Tabs/Notification";
 
 const TabSwitcher = ({ tabId }) => {
   return (
@@ -23,6 +24,9 @@ const TabSwitcher = ({ tabId }) => {
 
       {/* Account Page: Normal import */}
       {tabId === 5 && <MobileProfilePage />}
+
+      {/* Notification Page: Normal import */}
+      {tabId === 6 && <NotificationPage />}
     </>
   );
 };
