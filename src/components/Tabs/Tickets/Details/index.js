@@ -35,7 +35,14 @@ const TicketDetailView = ({ open, onClose, onCloseTicketOpen, onCloseRatingOpen,
 
   const RatingObject = DataParser(ticketData?.Rating || "[]", true).data;
 
-  const Comments = DataParser(ticketData?.comments || "[]", true).data;
+  const rawComments = DataParser(ticketData?.comments || "[]", true).data || [];
+  const Comments = [...rawComments].sort((a, b) => {
+    const dateA = a?.time ? new Date(a.time).getTime() : 0;
+    const dateB = b?.time ? new Date(b.time).getTime() : 0;
+    const validA = isNaN(dateA) ? 0 : dateA;
+    const validB = isNaN(dateB) ? 0 : dateB;
+    return validB - validA;
+  });
 
   const AllAttachments = Comments?.flatMap((comment) => {
     const { attachments } = ValidateAttachment(comment);
