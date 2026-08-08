@@ -16,14 +16,18 @@ class BaseAPI {
   // static BASE_URL = process.env.NODE_ENV === "production" ? "https://livenx.optigoapps.com/api/report" : "http://newnextjs.web/api/report";
   static BASE_URL = (() => {
     const host = window?.location?.hostname;
+    if (host.includes("localhost") || host.includes("nzen") || host.includes("calllog.web") || host.includes("optigocarely.web")) {
+      return "http://newnextjs.web/api/report";
+    }
+    return process.env.NODE_ENV === "production" ? "https://apilx.optigoapps.com/api/report" : "http://newnextjs.web/api/report";
     // if (host.includes("localhost") || host.includes("nzen") || host.includes("calllog.web")) {
     // return "http://192.168.1.71:3001/api/report";
     // return "http://newnextjs.web/api/report";
     // // return "https://apilx.optigoapps.com/api/report";
     // }
     // return process.env.NODE_ENV === "production" ? "https://apilx.optigoapps.com/api/report" : "http://newnextjs.web/api/report";
-    return "http://newnextjs.web/api/report";
-    // return "https://apilx.optigoapps.com/api/report";
+    // return "http://newnextjs.web/api/report";
+  // return "https://apilx.optigoapps.com/api/report";
   })();
 
   // static BASE_URL = "http://newnextjs.web/api/report";
