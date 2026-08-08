@@ -3,6 +3,7 @@ import { Box, Fab, Zoom, Typography, Backdrop, ClickAwayListener } from "@mui/ma
 import { AddRounded, PhoneRounded, AssignmentRounded, NoteAltRounded, CloseRounded } from "@mui/icons-material";
 import { styled } from "@mui/material/styles";
 import useCommonStore from "../../store/CommonStore";
+import Chat, { MobileChatButton } from "../Tabs/Chat";
 
 const MainFab = styled(Fab)(() => ({
   background: "linear-gradient(135deg, #4A66FF 0%, #2640FF 100%)",
@@ -31,6 +32,7 @@ const ActionItem = styled(Box)(() => ({
 
 const CallLogsFabMenu = () => {
   const [open, setOpen] = useState(false);
+  const [isChatOpen, setIsChatOpen] = useState(false);
   const setOpenForm = useCommonStore((s) => s.setOpenForm);
 
   const HandleNavigation = (action) => {
@@ -64,6 +66,10 @@ const CallLogsFabMenu = () => {
               pointerEvents: "none",
             }}
           >
+            <Box sx={{ pointerEvents: "auto" }}>
+              <MobileChatButton onClick={() => setIsChatOpen(true)} unreadCount={1} />
+            </Box>
+
             {actions.map((action, index) => (
               <Zoom in={open} timeout={200 + index * 60} key={action.label} style={{ transformOrigin: "bottom right" }}>
                 <ActionItem
@@ -127,6 +133,11 @@ const CallLogsFabMenu = () => {
           </MainFab>
         </Box>
       </ClickAwayListener>
+
+      {/* Render Chat UI when triggered */}
+      {isChatOpen && (
+        <Chat defaultOpen={true} onClose={() => setIsChatOpen(false)} />
+      )}
     </>
   );
 };

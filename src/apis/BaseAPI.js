@@ -23,7 +23,7 @@ class BaseAPI {
     // }
     // return process.env.NODE_ENV === "production" ? "https://apilx.optigoapps.com/api/report" : "http://newnextjs.web/api/report";
     return "http://newnextjs.web/api/report";
-    // return "https://apilx.optigoapps.com/api/report";
+  // return "https://apilx.optigoapps.com/api/report";
   })();
 
   // static BASE_URL = "http://newnextjs.web/api/report";
