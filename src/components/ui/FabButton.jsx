@@ -58,7 +58,7 @@ const CallLogsFabMenu = () => {
             sx={{
               position: "fixed",
               bottom: 160,
-              right: 25,
+              right: 20,
               display: "flex",
               flexDirection: "column-reverse",
               alignItems: "flex-end",
@@ -66,9 +66,11 @@ const CallLogsFabMenu = () => {
               pointerEvents: "none",
             }}
           >
-            <Box sx={{ pointerEvents: "auto" }}>
-              <MobileChatButton onClick={() => setIsChatOpen(true)} unreadCount={1} />
-            </Box>
+            <Zoom in={!open} mountOnEnter unmountOnExit>
+              <Box sx={{ pointerEvents: "auto", mb: 1 }}>
+                <MobileChatButton onClick={() => setIsChatOpen(true)} unreadCount={1} />
+              </Box>
+            </Zoom>
 
             {actions.map((action, index) => (
               <Zoom in={open} timeout={200 + index * 60} key={action.label} style={{ transformOrigin: "bottom right" }}>

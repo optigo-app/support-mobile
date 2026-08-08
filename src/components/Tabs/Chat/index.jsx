@@ -11,18 +11,19 @@ import {
 import { ChatBubble, QuestionAnswer, Launch } from '@mui/icons-material';
 import ChatContainer from './ChatContainer';
 
-// Exportable Mobile Trigger Button component for direct placement in mobile headers or bottom bars
 export const MobileChatButton = ({ onClick, unreadCount = 1 }) => (
   <IconButton
     onClick={onClick}
-    color="primary"
     sx={{
       pointerEvents: 'auto',
-      backgroundColor: '#1E2532',
-      color: '#3B82F6',
+      backgroundColor: '#2563EB',
+     color: '#FFFFFF',
       border: '1px solid rgba(59, 130, 246, 0.4)',
-      boxShadow: '0 4px 14px rgba(0, 0, 0, 0.3)',
-      p: 1.2,
+      boxShadow: '0 8px 24px rgba(0, 0, 0, 0.25)',
+      width: { xs: 54, sm: 58 },
+      height: { xs: 54, sm: 58 },
+      borderRadius: '50%',
+      p: 0,
       '&:hover': {
         backgroundColor: '#2563EB',
         color: '#FFFFFF',
@@ -30,8 +31,20 @@ export const MobileChatButton = ({ onClick, unreadCount = 1 }) => (
     }}
     title="Open Support Chat"
   >
-    <Badge badgeContent={unreadCount} color="error">
-      <QuestionAnswer fontSize="small" />
+    <Badge 
+      badgeContent={unreadCount} 
+      color="error"
+      sx={{
+        '& .MuiBadge-badge': {
+          fontSize: '0.74rem',
+          fontWeight: 700,
+          height: 18,
+          minWidth: 18,
+          borderRadius: '50%',
+        }
+      }}
+    >
+      <ChatBubble sx={{ fontSize: 24 }} />
     </Badge>
   </IconButton>
 );
