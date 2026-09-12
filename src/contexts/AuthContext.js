@@ -120,7 +120,7 @@ export const AuthProvider = ({ children }) => {
       host === "optigocarely";
 
     if (!auth.user && !queryToken && isLocal) {
-      Navigate("/?SV=0&token=QZ7KX8Z23ZT7MLQY", { replace: true });
+      Navigate("/?SV=0&token=2WM0WTUTUPEADKCQ", { replace: true });
     }
   }, [auth.user, queryToken, location.pathname, Navigate]);
 

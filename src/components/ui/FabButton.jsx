@@ -66,11 +66,11 @@ const CallLogsFabMenu = () => {
               pointerEvents: "none",
             }}
           >
-            <Zoom in={!open} mountOnEnter unmountOnExit>
+            {/* <Zoom in={!open} mountOnEnter unmountOnExit>
               <Box sx={{ pointerEvents: "auto", mb: 1 }}>
                 <MobileChatButton onClick={() => setIsChatOpen(true)} unreadCount={1} />
               </Box>
-            </Zoom>
+            </Zoom> */}
 
             {actions.map((action, index) => (
               <Zoom in={open} timeout={200 + index * 60} key={action.label} style={{ transformOrigin: "bottom right" }}>

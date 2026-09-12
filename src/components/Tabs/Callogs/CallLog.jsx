@@ -31,24 +31,21 @@ const CallLogsApp = () => {
   const [anchorElSort, setAnchorElSort] = useState(false);
   const [open, setOpen] = useState(false);
   const [selectedLog, setSelectedLog] = useState(null);
-  const [isRatingModalOpen, setIsRatingModalOpen] = useState(false);
+  const [ratingModalCallId, setRatingModalCallId] = useState(null);
   const scrollRef = useRef(null);
 
   const [searchParams, setSearchParams] = useSearchParams();
+  const isRatingModalOpen = searchParams.get("rate") === "true";
 
   useEffect(() => {
     const callIdInUrl = searchParams.get("callId");
-    const rateInUrl = searchParams.get("rate") === "true";
 
     if (callIdInUrl) {
       const log = callLog.find((item) => String(item.sr) === String(callIdInUrl));
       if (log) {
-        if (selectedLog?.sr !== log.sr) {
+        if (selectedLog?.sr !== log.sr || selectedLog?.comment !== log.comment || selectedLog !== log) {
           setSelectedLog(log);
           setOpen(true);
-        }
-        if (isRatingModalOpen !== rateInUrl) {
-          setIsRatingModalOpen(rateInUrl);
         }
       } else if (!isFetching && callLog.length > 0) {
         const fetchAndSelect = async () => {
@@ -58,9 +55,6 @@ const CallLogsApp = () => {
             if (found) {
               setSelectedLog(found);
               setOpen(true);
-              if (rateInUrl) {
-                setIsRatingModalOpen(true);
-              }
             }
           } catch (e) {
             console.error(e);
@@ -72,9 +66,6 @@ const CallLogsApp = () => {
       if (open) {
         setOpen(false);
         setSelectedLog(null);
-      }
-      if (isRatingModalOpen) {
-        setIsRatingModalOpen(false);
       }
     }
   }, [searchParams, callLog, isFetching]);
@@ -187,28 +178,47 @@ const CallLogsApp = () => {
   };
 
   const handleRatingOpen = (id) => {
-    setIsRatingModalOpen(true);
+    const targetId = id || selectedLog?.sr || searchParams.get("callId");
+    setRatingModalCallId(targetId);
     const newParams = new URLSearchParams(searchParams);
     newParams.set("rate", "true");
+    if (targetId) newParams.set("callId", String(targetId));
     setSearchParams(newParams);
   };
 
   const handleRatingClose = () => {
-    setIsRatingModalOpen(false);
+    setRatingModalCallId(null);
     const newParams = new URLSearchParams(searchParams);
     newParams.delete("rate");
     setSearchParams(newParams);
   };
 
   const HandleRatingSubmit = async (id, feedback, rating) => {
+    const targetId =
+      id && typeof id !== "boolean"
+        ? id
+        : ratingModalCallId || selectedLog?.sr || searchParams.get("callId");
+    if (!targetId) {
+      console.error("No valid callId found for rating submission");
+      return;
+    }
     try {
-      const res = await addFeedback(id, feedback, rating);
-      if (res?.rd?.[0]?.stat_msg === "The rating has been updated successfully.") {
-        handleRatingClose();
-        handleCloseDrawer();
-      }
+      const res = await addFeedback(targetId, feedback, rating);
+      // Immediately reflect rating in the selected log so stars show up in chat and header
+      setSelectedLog((prev) =>
+        prev && String(prev.sr) === String(targetId)
+          ? {
+              ...prev,
+              rating: feedback,
+              ratingByCustomer: feedback,
+              Rating: feedback,
+            }
+          : prev
+      );
+      // Cleanly close the rating popup (keep the call details drawer open)
+      handleRatingClose();
     } catch (error) {
-      console.log("Error:", error);
+      console.log("Error submitting rating:", error);
     }
   };
 
@@ -343,7 +353,14 @@ const CallLogsApp = () => {
       <FilterDrawer onClose={() => setAnchorElSort(false)} open={anchorElSort} title="Filter Logs" filterDefinitions={filterDefinitions} selectedFilters={selectedFilters} onToggleFilter={toggleFilter} onClearAll={clearAllFilters} totalFilters={totalFilters} onApply={() => setAnchorElSort(false)} />
 
       <CallLogDetailPage onCloseRatingOpen={handleRatingOpen} open={open} onClose={handleCloseDrawer} onBack={handleCloseDrawer} logData={selectedLog} />
-      <FullPageRating open={isRatingModalOpen} onClose={handleRatingClose} onConfirm={handleRatingClose} onSubmit={HandleRatingSubmit} Call={true} />
+      <FullPageRating
+        open={isRatingModalOpen}
+        onClose={handleRatingClose}
+        onConfirm={handleRatingClose}
+        onSubmit={HandleRatingSubmit}
+        callId={ratingModalCallId || selectedLog?.sr || searchParams.get("callId")}
+        Call={true}
+      />
     </Box>
   );
 };

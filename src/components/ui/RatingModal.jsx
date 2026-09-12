@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Box, Button, Rating, TextField, Typography, Dialog, Slide, IconButton, Fade, AppBar, Toolbar } from "@mui/material";
+import { Box, Button, Rating, TextField, Typography, Dialog, Slide, IconButton, Fade, AppBar, Toolbar, CircularProgress } from "@mui/material";
 import { StarRounded, CloseRounded, SentimentVeryDissatisfied, SentimentDissatisfied, SentimentSatisfied, SentimentSatisfiedAlt, SentimentVerySatisfied } from "@mui/icons-material";
 
 // --- Transition: Slide Up (Native iOS feel) ---
@@ -24,10 +24,11 @@ const getFeedbackConfig = (value) => {
   }
 };
 
-export function FullPageRating({ open, onClose, onSubmit = () => { }, Call, title }) {
+export function FullPageRating({ open, onClose, onSubmit = () => { }, Call, title, callId }) {
   const [rating, setRating] = useState(5);
   const [hover, setHover] = useState(-1);
   const [remark, setRemark] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Reset state on open
   useEffect(() => {
@@ -35,8 +36,27 @@ export function FullPageRating({ open, onClose, onSubmit = () => { }, Call, titl
       setRating(5);
       setRemark("");
       setHover(-1);
+      setIsSubmitting(false);
     }
   }, [open]);
+
+  const handleSubmit = async () => {
+    if (isSubmitting || rating === 0) return;
+    setIsSubmitting(true);
+    const resolvedId =
+      callId !== undefined && callId !== null && typeof callId !== "boolean"
+        ? callId
+        : typeof open !== "boolean"
+        ? open
+        : null;
+    try {
+      await onSubmit(resolvedId, rating, remark);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   const activeRating = hover !== -1 ? hover : rating;
   const config = getFeedbackConfig(activeRating);
@@ -69,11 +89,11 @@ export function FullPageRating({ open, onClose, onSubmit = () => { }, Call, titl
       {/* 1. Navbar */}
       <AppBar position="static" elevation={0} sx={{ bgcolor: "transparent" }}>
         <Toolbar>
-          <IconButton edge="start" onClick={onClose} sx={{ color: "#1E293B" }}>
+          <IconButton edge="start" onClick={onClose} disabled={isSubmitting} sx={{ color: "#1E293B" }}>
             <CloseRounded sx={{ fontSize: 32 }} />
           </IconButton>
           <Box sx={{ flexGrow: 1 }} />
-          <Button onClick={onClose} sx={{ color: "#64748B", fontWeight: 600, fontSize: "1rem", textTransform: "none" }}>
+          <Button onClick={onClose} disabled={isSubmitting} sx={{ color: "#64748B", fontWeight: 600, fontSize: "1rem", textTransform: "none" }}>
             Skip
           </Button>
         </Toolbar>
@@ -194,8 +214,8 @@ export function FullPageRating({ open, onClose, onSubmit = () => { }, Call, titl
           {/* Submit Button */}
           <Button
             fullWidth
-            onClick={() => onSubmit(open, rating, remark)}
-            disabled={rating === 0}
+            onClick={handleSubmit}
+            disabled={rating === 0 || isSubmitting}
             sx={{
               py: 1.5,
               borderRadius: "18px",
@@ -204,7 +224,7 @@ export function FullPageRating({ open, onClose, onSubmit = () => { }, Call, titl
               textTransform: "none",
               color: "#fff",
               background: "#0F172A", // Clean black/dark theme
-              boxShadow: rating === 0 ? "none" : "0 8px 25px -5px rgba(15, 23, 42, 0.4)",
+              boxShadow: rating === 0 || isSubmitting ? "none" : "0 8px 25px -5px rgba(15, 23, 42, 0.4)",
               transition: "0.3s",
               "&.Mui-disabled": { color: "#94A3B8" },
               "&:hover": {
@@ -212,7 +232,11 @@ export function FullPageRating({ open, onClose, onSubmit = () => { }, Call, titl
               },
             }}
           >
-            Submit
+            {isSubmitting ? (
+              <CircularProgress size={24} sx={{ color: "#fff" }} />
+            ) : (
+              "Submit"
+            )}
           </Button>
         </Box>
       </Box>

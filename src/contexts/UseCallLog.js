@@ -163,6 +163,9 @@ export function CallLogProvider(props) {
         projectID: call?.companyName || "",
         CorpId: call?.CorpId || "",
         source: "OptigoCarely",
+        filePath: call?.filePath || "",
+        comments: call?.comments || "",
+        isClient: 1,
       });
       setrefreshList((prev) => !prev);
       return data;
@@ -174,8 +177,9 @@ export function CallLogProvider(props) {
   const addFeedback = useCallback(
     async (callId, feedback, ratingByCustomer, contactMe) => {
       try {
+        const cleanCallId = typeof callId === "boolean" ? null : callId;
         const data = await CallLogApi.addFeedback({
-          callLogId: callId,
+          callLogId: cleanCallId,
           feedback,
           ratingByCustomer,
           contactMe,
@@ -183,9 +187,40 @@ export function CallLogProvider(props) {
         });
         setrefreshList((prev) => !prev);
         return data;
-      } catch (error) { }
+      } catch (error) {
+        console.error("Error submitting feedback:", error);
+      }
     },
     [user]
+  );
+
+  const addComment = useCallback(
+    async (callId, comment, filePath) => {
+      try {
+        const data = await CallLogApi.addCallComments(
+          callId,
+          comment,
+          filePath,
+          user?.id
+        );
+        const updatedRecord = data?.rd?.[0] || data?.rd1?.[0] || data?.Data?.rd?.[0];
+        if (updatedRecord) {
+          setCallLog((prev) =>
+            prev.map((item) =>
+              String(item.sr) === String(callId)
+                ? { ...item, ...updatedRecord }
+                : item
+            )
+          );
+        }
+        setrefreshList((prev) => !prev);
+        return data;
+      } catch (error) {
+        console.error("Error adding comment to call log:", error);
+        throw error;
+      }
+    },
+    [user?.id]
   );
 
   console.log(user, "call")
@@ -194,27 +229,93 @@ export function CallLogProvider(props) {
     console.log(data, "data")
     if (data?.company === user?.company) {
       setHasNewUpdate(true);
+      setrefreshList((prev) => !prev);
     } else {
       return;
     }
   });
 
   useSocketEvent("AcceptCall", (data) => {
-    console.log(data, "data")
-    if (data?.company === user?.company) {
-      setHasNewUpdate(true);
-    } else {
-      return;
+    console.log("AcceptCall event received:", data);
+    const targetId = data?.sr || data?.CallLogid || data?.id;
+    if (targetId) {
+      setCallLog((prev) =>
+        prev.map((c) =>
+          String(c?.sr) === String(targetId)
+            ? { ...c, ...data, receivedBy: data?.receivedBy || data?.AssignedEmpName || c?.receivedBy }
+            : c
+        )
+      );
     }
+    setHasNewUpdate(true);
+    setrefreshList((prev) => !prev);
+  });
+
+  useSocketEvent("StartCall", (data) => {
+    console.log("StartCall event received:", data);
+    const targetId = data?.sr || data?.CallLogid || data?.id;
+    if (targetId) {
+      setCallLog((prev) =>
+        prev.map((c) =>
+          String(c?.sr) === String(targetId)
+            ? {
+                ...c,
+                ...data,
+                callStart: data?.callStart || new Date().toISOString(),
+                Estatus: "Running",
+                status: "In Progress",
+              }
+            : c
+        )
+      );
+    }
+    setHasNewUpdate(true);
+    setrefreshList((prev) => !prev);
+  });
+
+  useSocketEvent("CALLSTART", (data) => {
+    console.log("CALLSTART event received:", data);
+    setrefreshList((prev) => !prev);
   });
 
   useSocketEvent("ForwardedCall", (data) => {
-    console.log(data, "data")
+    console.log("ForwardedCall event received:", data);
     if (data?.company === user?.company) {
       setHasNewUpdate(true);
-    } else {
-      return;
+      setrefreshList((prev) => !prev);
     }
+  });
+
+  useSocketEvent("CallComment", (data) => {
+    console.log("CallComment event received:", data);
+    setrefreshList((prev) => !prev);
+  });
+
+  useSocketEvent("EndCall", (data) => {
+    console.log("EndCall event received:", data);
+    const targetId = data?.sr || data?.CallLogid || data?.id;
+    if (targetId) {
+      setCallLog((prev) =>
+        prev.map((c) =>
+          String(c?.sr) === String(targetId)
+            ? {
+                ...c,
+                ...data,
+                callClosed: data?.callClosed || new Date().toISOString(),
+                Estatus: "Completed",
+                status: "Solved",
+              }
+            : c
+        )
+      );
+    }
+    setHasNewUpdate(true);
+    setrefreshList((prev) => !prev);
+  });
+
+  useSocketEvent("CALLEND", (data) => {
+    console.log("CALLEND event received:", data);
+    setrefreshList((prev) => !prev);
   });
 
 
@@ -224,6 +325,7 @@ export function CallLogProvider(props) {
       callLog,
       setCallLog,
       addCall,
+      addComment,
       masterData,
       EMPLOYEE_LIST,
       COMPANY_LIST,
@@ -249,7 +351,8 @@ export function CallLogProvider(props) {
     [callLog, masterData, isFetching, hasMore, filters,
       hasNewUpdate,     // ✅ REQUIRED
       refreshCallLogs,  // ✅ also good practice
-      setHasNewUpdate
+      setHasNewUpdate,
+      addComment
     ]
   );
 
