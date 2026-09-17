@@ -16,6 +16,7 @@ export const DeliveryProvider = ({ children }) => {
   // Filter & Pagination States
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
+  const [totalCount, setTotalCount] = useState(0);
   const [filters, setFilters] = useState({
     search: "",
     statusId: "",
@@ -58,6 +59,7 @@ export const DeliveryProvider = ({ children }) => {
     setDeliveryData([]);
     setPage(1);
     setHasMore(true);
+    setTotalCount(0); // Reset count immediately so stale total doesn't show during filter
     setFilters((prev) => ({ ...prev, ...updates }));
   };
  
@@ -67,6 +69,7 @@ export const DeliveryProvider = ({ children }) => {
       behavior: 'smooth'
     })
     setDeliveryData([]);
+    setTotalCount(0);
     setPage(1);
     setHasMore(true);
   }, []);
@@ -107,6 +110,10 @@ export const DeliveryProvider = ({ children }) => {
           SearchTerm: filters.search,
         });
         const list = response?.Data?.rd || [];
+        const rawTotal = response?.Data?.rd1?.[0] ? Object.values(response.Data.rd1[0])[0] : (response?.Data?.rd?.length || 0);
+        const total = typeof rawTotal === "number" ? rawTotal : (parseInt(rawTotal, 10) || 0);
+        setTotalCount(total);
+
         setDeliveryData((prev) => {
           if (page === 1) return list;
           const existingIds = new Set(prev.map((item) => item?.SrNo));
@@ -171,6 +178,7 @@ export const DeliveryProvider = ({ children }) => {
     updateFilters,
     isFetching,
     refreshDeliveryData,
+    totalCount,
   };
 
   return <DeliveryContext.Provider value={props}>{children}</DeliveryContext.Provider>;

@@ -190,6 +190,10 @@ export const AuthProvider = ({ children }) => {
     Cookie.remove("isUserLoggedIn");
     Cookie.remove("help_support");
     sessionStorage.removeItem("userRights");
+    sessionStorage.removeItem("common-store");
+    try {
+      localStorage.removeItem("common-store");
+    } catch (_) {}
     setTabId(0);
     Navigate("/logout", {
       replace: true,

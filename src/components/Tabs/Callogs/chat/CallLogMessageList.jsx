@@ -5,37 +5,123 @@ import CallLogMessageItem from "./CallLogMessageItem";
 
 export const parseCommentsData = (rawComment) => {
   if (!rawComment) return [];
-  if (Array.isArray(rawComment)) return rawComment;
+  let parsedList = [];
 
-  if (typeof rawComment === "string") {
+  if (Array.isArray(rawComment)) {
+    parsedList = rawComment;
+  } else if (typeof rawComment === "string") {
     const trimmed = rawComment.trim();
     if (!trimmed || trimmed === "null" || trimmed === "undefined" || trimmed === "[]") {
       return [];
     }
     try {
       const parsed = JSON.parse(trimmed);
-      if (Array.isArray(parsed)) return parsed;
-      if (typeof parsed === "object" && parsed !== null) return [parsed];
-      return [];
+      if (Array.isArray(parsed)) parsedList = parsed;
+      else if (typeof parsed === "object" && parsed !== null) parsedList = [parsed];
+      else {
+        parsedList = [
+          {
+            id: 1,
+            text: trimmed,
+            comment: trimmed,
+            time: new Date().toISOString(),
+            Name: "User",
+            IsClient: 1,
+          },
+        ];
+      }
     } catch (e) {
-      // If it's a plain text string comment
-      return [
+      parsedList = [
         {
           id: 1,
           text: trimmed,
+          comment: trimmed,
           time: new Date().toISOString(),
           Name: "User",
           IsClient: 1,
         },
       ];
     }
+  } else if (typeof rawComment === "object" && rawComment !== null) {
+    parsedList = [rawComment];
   }
 
-  if (typeof rawComment === "object" && rawComment !== null) {
-    return [rawComment];
+  // Deduplicate comments to prevent showing identical duplicate messages
+  const normalizedList = parsedList.map((item, idx) => {
+    if (typeof item === "string") {
+      return {
+        id: idx + 1,
+        text: item,
+        comment: item,
+        time: new Date().toISOString(),
+        Name: "User",
+        IsClient: 1,
+        isClient: 1,
+      };
+    }
+    const textVal = item.text ?? item.comment ?? item.Comments ?? item.Descr ?? "";
+    const timeVal = item.time ?? item.CreatedDate ?? item.date ?? item.entryDate ?? "";
+    const isClientVal =
+      item.IsClient === 1 ||
+      item.isClient === 1 ||
+      item.IsClient === "1" ||
+      item.isClient === true
+        ? 1
+        : 0;
+
+    return {
+      ...item,
+      id: item.id || item.Id || `comment-${idx}`,
+      text: textVal,
+      comment: textVal,
+      time: timeVal,
+      CreatedDate: timeVal,
+      Name: item.Name || item.CreatedByName || item.userName || (isClientVal ? "Client" : "Support Agent"),
+      IsClient: isClientVal,
+      isClient: isClientVal,
+      FilePath: item.FilePath || item.img || item.filePath || "",
+      img: item.FilePath || item.img || item.filePath || "",
+    };
+  });
+
+  return deduplicateComments(normalizedList);
+};
+
+export const deduplicateComments = (comments = []) => {
+  if (!Array.isArray(comments) || comments.length === 0) return [];
+  const seen = new Set();
+  const result = [];
+
+  for (const item of comments) {
+    if (!item) continue;
+    const text = (item.text ?? item.comment ?? item.Comments ?? "").trim();
+    const file = (item.FilePath || item.img || "").trim();
+
+    // If item has a real server ID, track it
+    const hasRealId = item.id && !String(item.id).startsWith("comment-") && !String(item.id).startsWith("temp-") && !String(item.id).startsWith("optimistic-");
+    
+    // Normalize time to a rough 60-second window to catch duplicate socket/API dispatches
+    const rawTime = item.time || item.CreatedDate || item.date || item.entryDate || "";
+    let timeBucket = "";
+    if (rawTime) {
+      const parsedTime = new Date(rawTime).getTime();
+      if (!isNaN(parsedTime)) {
+        timeBucket = Math.floor(parsedTime / 60000); // 1-minute bucket
+      }
+    }
+
+    // Compose a deduplication key based on message content and time
+    const dedupeKey = hasRealId 
+      ? `id:${item.id}` 
+      : `content:${text}:${file}:${timeBucket || "notime"}`;
+
+    if (!seen.has(dedupeKey)) {
+      seen.add(dedupeKey);
+      result.push(item);
+    }
   }
 
-  return [];
+  return result;
 };
 
 const CallLogMessageList = ({ comments = [], currentUser, logData, onPreviewFile }) => {
@@ -51,9 +137,12 @@ const CallLogMessageList = ({ comments = [], currentUser, logData, onPreviewFile
   });
 
   useEffect(() => {
-    if (bottomRef.current) {
-      bottomRef.current.scrollIntoView({ behavior: "smooth" });
-    }
+    const timer = setTimeout(() => {
+      if (bottomRef.current) {
+        bottomRef.current.scrollIntoView({ behavior: "smooth" });
+      }
+    }, 50);
+    return () => clearTimeout(timer);
   }, [normalizedComments.length]);
 
   if (normalizedComments.length === 0) {

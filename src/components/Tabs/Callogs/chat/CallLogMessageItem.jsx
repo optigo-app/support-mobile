@@ -66,7 +66,8 @@ const CallLogMessageItem = ({ comment, currentUser, logData, onPreviewFile }) =>
     : (commentAuthor || logData?.receivedBy || "Support Agent");
 
   const initials = getInitials(authorName, isClient ? "OC" : "SA");
-  const timeDisplay = formatCommentTime(comment?.time || comment?.date);
+  const timeDisplay = formatCommentTime(comment?.time || comment?.CreatedDate || comment?.date || comment?.entryDate);
+  const messageText = comment?.text || comment?.comment || comment?.Comments || "";
 
   // Attachment parsing
   const rawAttachment = comment?.img || comment?.FilePath || comment?.attachment;
@@ -99,6 +100,17 @@ const CallLogMessageItem = ({ comment, currentUser, logData, onPreviewFile }) =>
           mb: 1,
           width: "100%",
           boxSizing: "border-box",
+          animation: "smoothMessageSlideIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards",
+          "@keyframes smoothMessageSlideIn": {
+            "0%": {
+              opacity: 0,
+              transform: "translateY(12px) scale(0.98)",
+            },
+            "100%": {
+              opacity: 1,
+              transform: "translateY(0) scale(1)",
+            },
+          },
         }}
       >
         {/* Header + Bubble Column */}
@@ -132,7 +144,7 @@ const CallLogMessageItem = ({ comment, currentUser, logData, onPreviewFile }) =>
               boxShadow: "0 2px 10px rgba(74, 102, 255, 0.2)",
             }}
           >
-            {comment?.text && (
+            {messageText && (
               <Typography
                 sx={{
                   fontSize: "0.85rem",
@@ -142,14 +154,14 @@ const CallLogMessageItem = ({ comment, currentUser, logData, onPreviewFile }) =>
                   wordBreak: "break-word",
                 }}
               >
-                {comment.text}
+                {messageText}
               </Typography>
             )}
 
             {/* Attachment preview */}
             {attachmentUrl && (
               <Box
-                sx={{ mt: comment?.text ? 1 : 0, cursor: "pointer" }}
+                sx={{ mt: messageText ? 1 : 0, cursor: "pointer" }}
                 onClick={() => onPreviewFile && onPreviewFile(attachmentUrl)}
               >
                 {isImageAttachment ? (
@@ -230,6 +242,17 @@ const CallLogMessageItem = ({ comment, currentUser, logData, onPreviewFile }) =>
         mb: 1,
         width: "100%",
         boxSizing: "border-box",
+        animation: "smoothMessageSlideIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards",
+        "@keyframes smoothMessageSlideIn": {
+          "0%": {
+            opacity: 0,
+            transform: "translateY(12px) scale(0.98)",
+          },
+          "100%": {
+            opacity: 1,
+            transform: "translateY(0) scale(1)",
+          },
+        },
       }}
     >
       {/* Support Agent Avatar on the Left */}
@@ -295,7 +318,7 @@ const CallLogMessageItem = ({ comment, currentUser, logData, onPreviewFile }) =>
             boxShadow: "0 2px 8px rgba(0, 0, 0, 0.04)",
           }}
         >
-          {comment?.text && (
+          {messageText && (
             <Typography
               sx={{
                 fontSize: "0.85rem",
@@ -305,14 +328,14 @@ const CallLogMessageItem = ({ comment, currentUser, logData, onPreviewFile }) =>
                 wordBreak: "break-word",
               }}
             >
-              {comment.text}
+              {messageText}
             </Typography>
           )}
 
           {/* Attachment preview */}
           {attachmentUrl && (
             <Box
-              sx={{ mt: comment?.text ? 1 : 0, cursor: "pointer" }}
+              sx={{ mt: messageText ? 1 : 0, cursor: "pointer" }}
               onClick={() => onPreviewFile && onPreviewFile(attachmentUrl)}
             >
               {isImageAttachment ? (

@@ -135,16 +135,17 @@ const CallLogCommentInput = ({ user, callId, onCommentAdded, disabled = false })
         }
       }
 
-      // 2. Call context addComment
-      const result = await addComment(callId, trimmedComment, uploadedFileUrl);
-
-      // 3. Trigger optimistic update callback
+      // 2. Trigger optimistic update callback immediately so UI feels instant
+      const tempId = `temp-${Date.now()}`;
       if (onCommentAdded) {
         const optimisticComment = {
-          id: Date.now(),
-          Name: user?.fullName || user?.firstname + " " + (user?.lastname || "") || "You",
+          id: tempId,
+          isOptimistic: true,
+          Name: user?.fullName || `${user?.firstname || ""} ${user?.lastname || ""}`.trim() || "You",
           text: trimmedComment,
+          comment: trimmedComment,
           time: new Date().toISOString(),
+          CreatedDate: new Date().toISOString(),
           img: uploadedFileUrl || null,
           FilePath: uploadedFileUrl || null,
           IsClient: 1,
@@ -155,9 +156,12 @@ const CallLogCommentInput = ({ user, callId, onCommentAdded, disabled = false })
         onCommentAdded(optimisticComment);
       }
 
-      // 4. Reset input
+      // 3. Reset input immediately for responsive UX
       setComment("");
       setFiles([]);
+
+      // 4. Call context addComment
+      await addComment(callId, trimmedComment, uploadedFileUrl);
     } catch (error) {
       console.error("Failed to post comment:", error);
       alert("Failed to post comment. Please try again.");

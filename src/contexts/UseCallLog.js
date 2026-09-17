@@ -3,6 +3,77 @@ import { format } from "date-fns";
 import CallLogApi from "../apis/CallLogApiController";
 import { useAuth } from "../contexts/AuthContext";
 import { useSocketEvent } from "../hooks/useSocketListener";
+import { commentUpdates$ } from "../rxjs/commentEvents";
+
+const isValidCommentPayload = (data) => {
+  if (!data || typeof data !== "object") return false;
+  const callId = data.CallLogId ?? data.sr ?? data.callLogId;
+  if (!callId || isNaN(Number(callId)) || Number(callId) <= 0) return false;
+  if (data.Comments === undefined && data.comment === undefined && data.text === undefined) return false;
+  return true;
+};
+
+const appendCommentToCall = (callRecord, commentPayload) => {
+  if (!callRecord) return callRecord;
+  const rawCommentText =
+    commentPayload.Comments ?? commentPayload.comment ?? commentPayload.text ?? "";
+
+  const isClient =
+    commentPayload.IsClient === 1 ||
+    commentPayload.isClient === 1 ||
+    commentPayload.isClient === true ||
+    commentPayload.IsClient === "1"
+      ? 1
+      : 0;
+
+  const commentItem = {
+    id: commentPayload.id || Date.now(),
+    text: rawCommentText,
+    comment: rawCommentText,
+    time: commentPayload.CreatedDate || commentPayload.time || new Date().toISOString(),
+    Name: commentPayload.Name || commentPayload.CreatedByName || (isClient ? "Client" : "Support User"),
+    CreatedBy: commentPayload.CreatedBy,
+    IsClient: isClient,
+    isClient: isClient,
+    img: commentPayload.FilePath || commentPayload.img || "",
+    FilePath: commentPayload.FilePath || commentPayload.img || "",
+  };
+
+  let existing = [];
+  if (typeof callRecord.comment === "string") {
+    try {
+      existing = JSON.parse(callRecord.comment);
+    } catch (_) {
+      existing = [];
+    }
+  } else if (Array.isArray(callRecord.comment)) {
+    existing = [...callRecord.comment];
+  }
+
+  const exists = existing.some((c) => {
+    if (commentItem.id && c.id && String(c.id) === String(commentItem.id)) {
+      return true;
+    }
+    const cText = (c.text || c.comment || "").trim();
+    const newText = commentItem.text.trim();
+    const cFile = (c.FilePath || c.img || "").trim();
+    const newFile = (commentItem.FilePath || commentItem.img || "").trim();
+    if (cText === newText && cFile === newFile) {
+      return true;
+    }
+    return false;
+  });
+
+  if (!exists) {
+    existing.push(commentItem);
+  }
+
+  return {
+    ...callRecord,
+    comment: JSON.stringify(existing),
+    comments: existing,
+  };
+};
 
 const CallLogContext = createContext(null);
 
@@ -20,6 +91,7 @@ export function CallLogProvider(props) {
   // Filter & Pagination States
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
+  const [totalCount, setTotalCount] = useState(0);
   const [filters, setFilters] = useState({ search: "", statusId: "", Filter: "", StartDate: "", EndDate: "" });
   const [hasNewUpdate, setHasNewUpdate] = useState(false);
 
@@ -55,6 +127,7 @@ export function CallLogProvider(props) {
     setCallLog([]);
     setPage(1);
     setHasMore(true);
+    setTotalCount(0); // Reset count immediately so stale total doesn't show during filter
     setFilters((prev) => ({ ...prev, ...updates }));
   };
 
@@ -64,6 +137,7 @@ export function CallLogProvider(props) {
       behavior: 'smooth'
     })
     setCallLog([]);
+    setTotalCount(0);
     setPage(1);
     setHasMore(true);
     setHasNewUpdate(false);
@@ -113,6 +187,9 @@ export function CallLogProvider(props) {
         });
 
         const list = data?.rd || [];
+        const rawTotal = data?.rd1?.[0] ? Object.values(data.rd1[0])[0] : (data?.rd?.length || 0);
+        const total = typeof rawTotal === "number" ? rawTotal : (parseInt(rawTotal, 10) || 0);
+        setTotalCount(total);
 
         setCallLog((prev) => {
           if (page === 1) return list;
@@ -235,6 +312,40 @@ export function CallLogProvider(props) {
     }
   });
 
+    // RxJS subscription for smooth real-time comment updates
+  useEffect(() => {
+    const sub = commentUpdates$.subscribe((commentData) => {
+      if (!isValidCommentPayload(commentData)) return;
+      const callId = commentData.CallLogId ?? commentData.sr ?? commentData.callLogId;
+
+      setCallLog((prev) => {
+        if (!Array.isArray(prev)) return prev;
+        const exists = prev.some(
+          (c) => String(c?.sr) === String(callId) || String(c?.id) === String(callId)
+        );
+        if (!exists) return prev;
+        return prev.map((c) =>
+          String(c?.sr) === String(callId) || String(c?.id) === String(callId)
+            ? { ...appendCommentToCall(c, commentData), hasNewComment: true }
+            : c
+        );
+      });
+    });
+
+    return () => sub.unsubscribe();
+  }, []);
+
+  useSocketEvent("ADDCOMMENTS", (data) => {
+    console.log("ADDCOMMENTS event received in support-mobile:", data);
+    if (!isValidCommentPayload(data)) return;
+    commentUpdates$.next(data);
+  });
+
+  // useSocketEvent("CallComment", (data) => {
+  //   console.log("CallComment event received in support-mobile:", data);
+  //   setrefreshList((prev) => !prev);
+  // });
+
   useSocketEvent("AcceptCall", (data) => {
     console.log("AcceptCall event received:", data);
     const targetId = data?.sr || data?.CallLogid || data?.id;
@@ -286,10 +397,6 @@ export function CallLogProvider(props) {
     }
   });
 
-  useSocketEvent("CallComment", (data) => {
-    console.log("CallComment event received:", data);
-    setrefreshList((prev) => !prev);
-  });
 
   useSocketEvent("EndCall", (data) => {
     console.log("EndCall event received:", data);
@@ -320,6 +427,17 @@ export function CallLogProvider(props) {
 
 
 
+  const clearCallUnread = useCallback((callId) => {
+    if (!callId) return;
+    setCallLog((prev) =>
+      prev.map((c) =>
+        String(c.sr) === String(callId) || String(c.id) === String(callId)
+          ? { ...c, hasNewComment: false }
+          : c
+      )
+    );
+  }, []);
+
   const contextValue = useMemo(
     () => ({
       callLog,
@@ -346,13 +464,18 @@ export function CallLogProvider(props) {
       updateFilters,
       isFetching, // This is now reliable
       refreshCallLogs,
-      hasNewUpdate
+      hasNewUpdate,
+      totalCount,
+      clearCallUnread,
+      commentUpdates$
     }),
     [callLog, masterData, isFetching, hasMore, filters,
       hasNewUpdate,     // ✅ REQUIRED
       refreshCallLogs,  // ✅ also good practice
       setHasNewUpdate,
-      addComment
+      addComment,
+      totalCount,
+      clearCallUnread
     ]
   );
 

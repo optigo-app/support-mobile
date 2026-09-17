@@ -245,7 +245,7 @@ class CallLogApi extends BaseAPI {
         mode: "COMMENTS",
         params,
         functionName: "COMMENTS",
-        socketEvent: "CallComment",
+        socketEvent: "ADDCOMMENTS",
       });
       return response;
     } catch (error) {

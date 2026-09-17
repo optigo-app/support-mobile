@@ -23,8 +23,8 @@ const CALL_TYPE_STYLES = {
 };
 
 const CallLogsApp = () => {
-  const { callLog, addFeedback, loadMore, hasMore, isFetching, updateFilters, filters,
-    hasNewUpdate, refreshCallLogs, setHasNewUpdate
+  const { callLog, setCallLog, addFeedback, loadMore, hasMore, isFetching, updateFilters, filters,
+    hasNewUpdate, refreshCallLogs, setHasNewUpdate, totalCount
   } = useCallLog();
 
   const [searchQuery, setSearchQuery] = useState("");
@@ -46,6 +46,13 @@ const CallLogsApp = () => {
         if (selectedLog?.sr !== log.sr || selectedLog?.comment !== log.comment || selectedLog !== log) {
           setSelectedLog(log);
           setOpen(true);
+        }
+        if (log.hasNewComment) {
+          setCallLog((prev) =>
+            prev.map((item) =>
+              String(item.sr) === String(callIdInUrl) ? { ...item, hasNewComment: false } : item
+            )
+          );
         }
       } else if (!isFetching && callLog.length > 0) {
         const fetchAndSelect = async () => {
@@ -164,6 +171,13 @@ const CallLogsApp = () => {
   const handleOpenDrawer = (log) => {
     setSelectedLog(log);
     setOpen(true);
+    if (log?.hasNewComment) {
+      setCallLog((prev) =>
+        prev.map((item) =>
+          String(item.sr) === String(log.sr) ? { ...item, hasNewComment: false } : item
+        )
+      );
+    }
     const newParams = new URLSearchParams(searchParams);
     newParams.set("callId", log.sr.toString());
     setSearchParams(newParams);
@@ -234,7 +248,7 @@ const CallLogsApp = () => {
         anchorElSort={anchorElSort}
         setAnchorElSort={setAnchorElSort}
         title="Call Logs"
-        count={visibleLogs?.length}
+        count={totalCount}
         onRefresh={refreshCallLogs}
         isRefreshing={isFetching}
         onClearSearch={() => setSearchQuery("")}
@@ -272,11 +286,59 @@ const CallLogsApp = () => {
                     "&:hover": { bgcolor: "rgba(0,0,0,0.03)" },
                   }}
                 >
-                  <Avatar sx={{ width: 40, height: 40, bgcolor: typeStyle.bg, color: typeStyle.color, mt: 0.4 }}>{React.cloneElement(typeStyle.icon, { fontSize: "small" })}</Avatar>
+                  <Avatar
+                    sx={{
+                      width: 40,
+                      height: 40,
+                      bgcolor: typeStyle.bg,
+                      color: typeStyle.color,
+                      mt: 0.4,
+                      boxShadow: log?.hasNewComment
+                        ? "0 0 0 2px #fff, 0 0 0 4px #4A66FF"
+                        : "none",
+                      transition: "box-shadow 0.3s ease",
+                    }}
+                  >
+                    {React.cloneElement(typeStyle.icon, { fontSize: "small" })}
+                  </Avatar>
                   <Box sx={{ flex: 1, minWidth: 0, overflow: "hidden" }}>
                     <Box sx={{ display: "flex", justifyContent: "space-between", mb: 0.2 }}>
                       <Typography sx={{ fontWeight: 600, fontSize: "0.95rem", color: COLORS?.subtitle, noWrap: true }}>{log?.description || "No Description"}</Typography>
-                      <Typography sx={{ fontSize: "0.75rem", color: COLORS?.textSecondary }}>{formatted?.smart}</Typography>
+                      <Box sx={{ display: "flex", alignItems: "center", gap: 0.8 }}>
+                        {log?.hasNewComment && (
+                          <Box
+                            sx={{
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: 0.5,
+                              px: 0.8,
+                              py: 0.2,
+                              borderRadius: "10px",
+                              bgcolor: "rgba(16, 185, 129, 0.12)",
+                              border: "1px solid rgba(16, 185, 129, 0.3)",
+                            }}
+                          >
+                            <Box
+                              sx={{
+                                width: 6,
+                                height: 6,
+                                borderRadius: "50%",
+                                bgcolor: "#10B981",
+                                boxShadow: "0 0 8px #10B981",
+                                animation: "newCommentPulse 1.5s infinite",
+                                "@keyframes newCommentPulse": {
+                                  "0%, 100%": { transform: "scale(1)", opacity: 1 },
+                                  "50%": { transform: "scale(1.3)", opacity: 0.6 },
+                                },
+                              }}
+                            />
+                            <Typography sx={{ fontSize: "0.62rem", fontWeight: 800, color: "#059669", letterSpacing: 0.5 }}>
+                              NEW
+                            </Typography>
+                          </Box>
+                        )}
+                        <Typography sx={{ fontSize: "0.75rem", color: COLORS?.textSecondary }}>{formatted?.smart}</Typography>
+                      </Box>
                     </Box>
                     <Typography sx={{ fontSize: "0.80rem", color: COLORS?.textSecondary, display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical", overflow: "hidden", mb: 0.5 }}>{log?.appname || "No AppName"}</Typography>
                     <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.8, alignItems: "center" }}>
@@ -343,7 +405,7 @@ const CallLogsApp = () => {
             )}
             {!hasMore && visibleLogs?.length > 0 && (
               <Box sx={{ p: 2, textAlign: "center", color: COLORS?.textSecondary }}>
-                <Typography variant="caption">All logs loaded ({visibleLogs?.length})</Typography>
+                <Typography variant="caption">All logs loaded ({totalCount || visibleLogs?.length})</Typography>
               </Box>
             )}
           </List>
