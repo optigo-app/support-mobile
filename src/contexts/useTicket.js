@@ -22,6 +22,7 @@ export const TicketProvider = ({ children }) => {
   // Filter & Pagination States
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
+  const [totalCount, setTotalCount] = useState(0);
   const [filters, setFilters] = useState({
     search: "",
     statusId: "",
@@ -58,6 +59,7 @@ export const TicketProvider = ({ children }) => {
     setTickets([]);
     setPage(1);
     setHasMore(true);
+    setTotalCount(0); // Reset count immediately so stale total doesn't show during filter
     setFilters((prev) => ({ ...prev, ...updates }));
   };
 
@@ -76,6 +78,7 @@ export const TicketProvider = ({ children }) => {
     setPage(1);
     setHasMore(true);
     setTickets([]);
+    setTotalCount(0);
   };
 
 
@@ -136,6 +139,10 @@ export const TicketProvider = ({ children }) => {
           setError(response?.msg);
           return;
         }
+
+        const rawTotal = response?.rd1?.[0] ? Object.values(response.rd1[0])[0] : (response?.rd?.length || 0);
+        const total = typeof rawTotal === "number" ? rawTotal : (parseInt(rawTotal, 10) || 0);
+        setTotalCount(total);
 
         setTickets((prev) => {
           if (page === 1) return list;
@@ -416,7 +423,8 @@ export const TicketProvider = ({ children }) => {
         updateFilters,
         isFetching,
         refreshTickets: ResetFilters,
-        setHasNewUpdate
+        setHasNewUpdate,
+        totalCount
       }}
     >
       {children}

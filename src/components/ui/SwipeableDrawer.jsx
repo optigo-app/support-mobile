@@ -14,7 +14,10 @@ const COLORS = {
 const DrawerPaper = styled("div")(({ theme }) => ({
   backgroundColor: "#FFFFFF",
   boxShadow: "0 -4px 20px rgba(0,0,0,0.08)",
+  height: "85vh",
   maxHeight: "85vh",
+  display: "flex",
+  flexDirection: "column",
   overflow: "hidden", // Let inner content scroll
 }));
 
@@ -28,7 +31,7 @@ const Puller = styled(Box)(() => ({
   left: "calc(50% - 20px)",
 }));
 
-const SwipeableBottomDrawer = ({ children, open, onClose ,bgcolor }) => {
+const SwipeableBottomDrawer = ({ children, open, onClose, bgcolor }) => {
   return (
     <SwipeableDrawer
       anchor="bottom"
@@ -45,7 +48,10 @@ const SwipeableBottomDrawer = ({ children, open, onClose ,bgcolor }) => {
           maxWidth: "600px",
           margin: "0 auto",
           width: "100%",
+          height: "85vh",
           borderRadius: "24px 24px 0 0",
+          display: "flex",
+          flexDirection: "column",
         },
       }}
     >
@@ -54,6 +60,7 @@ const SwipeableBottomDrawer = ({ children, open, onClose ,bgcolor }) => {
         sx={{
           bgcolor: "#FFFFFF",
           height: 24,
+          flexShrink: 0,
           position: "sticky",
           top: 0,
           zIndex: 10,
@@ -67,14 +74,14 @@ const SwipeableBottomDrawer = ({ children, open, onClose ,bgcolor }) => {
       {/* Content Container */}
       <Box
         sx={{
-          pb: 4,
-          overflowY: "auto",
-          maxHeight: "calc(85vh - 30px)",
-          // Smooth scrolling
+          flex: 1,
+          display: "flex",
+          flexDirection: "column",
+          minHeight: 0,
+          overflow: "hidden",
           WebkitOverflowScrolling: "touch",
           "&::-webkit-scrollbar": { display: "none" },
-          bgcolor: bgcolor || "transparent" 
-
+          bgcolor: bgcolor || "transparent",
         }}
       >
         {children}

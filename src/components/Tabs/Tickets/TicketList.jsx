@@ -70,6 +70,7 @@ const TicketListApp = () => {
     hasNewUpdate,
     refreshTickets,
     setHasNewUpdate,
+    totalCount,
   } = useTicket();
 
   const [anchorElSort, setAnchorElSort] = useState(false);
@@ -342,7 +343,7 @@ const TicketListApp = () => {
       >
         {/* HEADER */}
         <GmailStyleHeader
-          count={visibleLogs?.length}
+          count={totalCount}
           FilteringOptions={options}
           onFilterChange={handleHeaderFilterChange}
           activeFilter={activeFilterLabel}
@@ -675,7 +676,7 @@ const TicketListApp = () => {
                   }}
                 >
                   <Typography variant="caption">
-                    All tickets loaded ({visibleLogs?.length})
+                    All tickets loaded ({totalCount || visibleLogs?.length})
                   </Typography>
                 </Box>
               )}

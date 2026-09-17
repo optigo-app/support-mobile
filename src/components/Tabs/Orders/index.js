@@ -116,6 +116,7 @@ const OrderDashboardApp = () => {
     filters,
     AddFeedBack,
     refreshDeliveryData,
+    totalCount,
   } = useDelivery();
   const {
     filterDefinitions,
@@ -424,7 +425,7 @@ const OrderDashboardApp = () => {
           searchQuery={searchQuery}
           onSearch={(e) => setSearchQuery(e.target.value)}
           title="Search Orders"
-          count={visibleLogs?.length}
+          count={totalCount}
           onRefresh={refreshDeliveryData}
           isRefreshing={isFetching}
           onClearSearch={() => setSearchQuery("")}
@@ -632,7 +633,7 @@ const OrderDashboardApp = () => {
                   }}
                 >
                   <Typography variant="caption">
-                    All orders loaded ({visibleLogs?.length})
+                    All orders loaded ({totalCount || visibleLogs?.length})
                   </Typography>
                 </Box>
               )}

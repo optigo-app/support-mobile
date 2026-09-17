@@ -1,5 +1,10 @@
 import { create } from "zustand";
-import { persist } from "zustand/middleware";
+import { persist, createJSONStorage } from "zustand/middleware";
+
+// Clean up legacy localStorage entry so it does not persist across browser sessions
+try {
+  localStorage.removeItem("common-store");
+} catch (_) {}
 
 const useCommonStore = create(
   persist(
@@ -12,6 +17,7 @@ const useCommonStore = create(
     }),
     {
       name: "common-store",
+      storage: createJSONStorage(() => sessionStorage),
       partialize: (state) => ({
         tabId: state.tabId,
       }),

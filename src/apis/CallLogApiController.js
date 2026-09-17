@@ -90,7 +90,7 @@ class CallLogApi extends BaseAPI {
   }
 
   // Add a Call
-  static async addCall({ entryDate, customerName, projectID, appID, description, deptId, empId, source, createdBy, CorpId }) {
+  static async addCall({ entryDate, customerName, projectID, appID, description, deptId, empId, source, createdBy, CorpId, filePath, comments }) {
     try {
       const params = {
         EntryDate: entryDate,
@@ -105,6 +105,8 @@ class CallLogApi extends BaseAPI {
       };
       if (deptId) params.DeptId = deptId;
       if (empId) params.EmpId = empId;
+      if (filePath) params.FilePath = filePath;
+      if (comments) params.Comments = comments;
 
       const response = await this.requestToApi({
         mode: "ADDCALL",
@@ -232,11 +234,18 @@ class CallLogApi extends BaseAPI {
   // Add Call Comments
   static async addCallComments(callLogId, comments, filePath, createdBy) {
     try {
-      const params = { CallLogid: callLogId, Comments: comments, FilePath: filePath, CreatedBy: createdBy };
+      const params = {
+        CallLogid: callLogId,
+        Comments: comments,
+        FilePath: filePath || "",
+        CreatedBy: createdBy,
+        IsClient: 1,
+      };
       const response = await this.requestToApi({
         mode: "COMMENTS",
         params,
         functionName: "COMMENTS",
+        socketEvent: "ADDCOMMENTS",
       });
       return response;
     } catch (error) {
@@ -248,7 +257,13 @@ class CallLogApi extends BaseAPI {
   // Add Feedback
   static async addFeedback({ callLogId, feedback, ratingByCustomer, createdBy }) {
     try {
-      const params = { CallLogid: callLogId, RatingByCustomer: feedback, CreatedBy: createdBy, ...(ratingByCustomer && { Feedback: ratingByCustomer }) };
+      const cleanCallLogId = typeof callLogId === "boolean" ? "" : callLogId;
+      const params = {
+        CallLogid: cleanCallLogId,
+        RatingByCustomer: feedback,
+        CreatedBy: createdBy,
+        ...(ratingByCustomer && { Feedback: ratingByCustomer }),
+      };
       const response = await this.requestToApi({
         mode: "FEEDBACK",
         params,

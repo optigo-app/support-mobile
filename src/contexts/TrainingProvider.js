@@ -14,6 +14,7 @@ export const TrainingProvider = ({ children }) => {
     // Filter & Pagination States
     const [page, setPage] = useState(1);
     const [hasMore, setHasMore] = useState(true);
+    const [totalCount, setTotalCount] = useState(0);
     const [filters, setFilters] = useState({
         search: "",
         statusId: "",
@@ -70,6 +71,7 @@ export const TrainingProvider = ({ children }) => {
         setTraininglist([]);
         setPage(1);
         setHasMore(true);
+        setTotalCount(0); // Reset count immediately so stale total doesn't show during filter
         setFilters((prev) => ({ ...prev, ...updates }));
     };
 
@@ -79,6 +81,7 @@ export const TrainingProvider = ({ children }) => {
             behavior: 'smooth'
         })
         setTraininglist([]);
+        setTotalCount(0);
         setPage(1);
         setHasMore(true);
     }, []);
@@ -107,6 +110,10 @@ export const TrainingProvider = ({ children }) => {
                     TrainingType: filters?.TrainingType
                 });
                 const list = response.Data.rd || [];
+                const rawTotal = response?.Data?.rd1?.[0] ? Object.values(response.Data.rd1[0])[0] : (response?.Data?.rd?.length || 0);
+                const total = typeof rawTotal === "number" ? rawTotal : (parseInt(rawTotal, 10) || 0);
+                setTotalCount(total);
+
                 setTraininglist(
                     (prev) => {
                         if (page === 1) return list;
@@ -174,6 +181,7 @@ export const TrainingProvider = ({ children }) => {
         updateFilters,
         isFetching,
         refreshTrainingData,
+        totalCount,
     };
 
     return <TrainingContext.Provider value={value}>{children}</TrainingContext.Provider>;

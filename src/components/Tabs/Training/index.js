@@ -124,6 +124,7 @@ const TrainingLogsApp = () => {
     updateFilters,
     isFetching,
     refreshTrainingData,
+    totalCount,
   } = useTraining();
 
   const [searchParams, setSearchParams] = useSearchParams();
@@ -434,7 +435,7 @@ const TrainingLogsApp = () => {
         searchQuery={searchQuery}
         onSearch={(e) => setSearchQuery(e.target.value)}
         title="My Training"
-        count={visibleLogs?.length}
+        count={totalCount}
         onRefresh={refreshTrainingData}
         isRefreshing={isFetching}
         onClearSearch={() => setSearchQuery("")}
@@ -642,7 +643,7 @@ const TrainingLogsApp = () => {
                 sx={{ p: 2, textAlign: "center", color: COLORS.textSecondary }}
               >
                 <Typography variant="caption">
-                  All training records loaded ({visibleLogs?.length})
+                  All training records loaded ({totalCount || visibleLogs?.length})
                 </Typography>
               </Box>
             )}
