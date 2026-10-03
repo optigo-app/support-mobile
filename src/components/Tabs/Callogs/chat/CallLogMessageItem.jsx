@@ -14,37 +14,47 @@ export const getInitials = (name, fallback = "U") => {
 export const formatCommentTime = (rawTime) => {
   if (!rawTime) return "";
   try {
-    // If it's a "HH:mm:ss" format
-    if (typeof rawTime === "string" && rawTime.includes(":") && !rawTime.includes("T") && !rawTime.includes("-")) {
-      const parts = rawTime.split(":");
-      const h = parseInt(parts[0], 10);
-      const m = parts[1]?.slice(0, 2) || "00";
-      if (!isNaN(h)) {
-        const ampm = h >= 12 ? "PM" : "AM";
+    const trimmed = String(rawTime).trim();
+    if (!trimmed || trimmed.startsWith("1900") || trimmed.startsWith("0000")) return "";
+
+    // 1. If it's a "HH:mm" or "HH:mm:ss" format
+    if (trimmed.includes(":") && !trimmed.includes("T") && !trimmed.includes("-") && !trimmed.includes("/")) {
+      const match = trimmed.match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?(?:\s*([AaPp][Mm]))?$/);
+      if (match) {
+        let h = parseInt(match[1], 10);
+        const m = match[2];
+        const ampm = match[4]?.toUpperCase();
+        if (ampm) {
+          return `${h}:${m} ${ampm}`;
+        }
+        const period = h >= 12 ? "PM" : "AM";
         const h12 = h % 12 || 12;
-        return `${h12}:${m} ${ampm}`;
+        return `${h12}:${m} ${period}`;
       }
     }
 
-    const d = new Date(rawTime);
+    // 2. Full datetime string with or without Z (e.g. "2026-10-03T14:08:00.000Z", "2026-10-03 14:08:00")
+    // Strip trailing 'Z' so it is treated as local time (IST), matching database on refresh.
+    const cleanDateStr = trimmed.replace(/Z$/i, "").replace(" ", "T");
+    const d = new Date(cleanDateStr);
     if (!isNaN(d.getTime())) {
       const now = new Date();
       const isToday = d.toDateString() === now.toDateString();
       const timeOnly = d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit", hour12: true });
 
       if (isToday) {
-        return timeOnly; // e.g. "12:38 PM"
+        return timeOnly; // e.g. "2:08 PM"
       }
 
       const dayMonth = d.toLocaleDateString([], { month: "short", day: "numeric" });
-      return `${dayMonth}, ${timeOnly}`; // e.g. "9 Sep, 12:38 PM"
+      return `${dayMonth}, ${timeOnly}`; // e.g. "3 Oct, 2:08 PM"
     }
   } catch (e) {}
 
   return String(rawTime);
 };
 
-const CallLogMessageItem = ({ comment, currentUser, logData, onPreviewFile }) => {
+const CallLogMessageItem = React.memo(({ comment, currentUser, logData, onPreviewFile }) => {
   const callerName = (logData?.callBy || currentUser?.fullName || currentUser?.company || "").trim();
   const commentAuthor = (comment?.Name || comment?.sender || "").trim();
 
@@ -100,7 +110,11 @@ const CallLogMessageItem = ({ comment, currentUser, logData, onPreviewFile }) =>
           mb: 1,
           width: "100%",
           boxSizing: "border-box",
-          animation: "smoothMessageSlideIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards",
+          transformOrigin: "bottom right",
+          animation: comment?.isNew
+            ? "smoothMessageSlideIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards"
+            : "none",
+          willChange: comment?.isNew ? "transform, opacity" : "auto",
           "@keyframes smoothMessageSlideIn": {
             "0%": {
               opacity: 0,
@@ -242,7 +256,11 @@ const CallLogMessageItem = ({ comment, currentUser, logData, onPreviewFile }) =>
         mb: 1,
         width: "100%",
         boxSizing: "border-box",
-        animation: "smoothMessageSlideIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards",
+        transformOrigin: "bottom left",
+        animation: comment?.isNew
+          ? "smoothMessageSlideIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards"
+          : "none",
+        willChange: comment?.isNew ? "transform, opacity" : "auto",
         "@keyframes smoothMessageSlideIn": {
           "0%": {
             opacity: 0,
@@ -381,6 +399,6 @@ const CallLogMessageItem = ({ comment, currentUser, logData, onPreviewFile }) =>
       </Box>
     </Box>
   );
-};
+});
 
 export default CallLogMessageItem;

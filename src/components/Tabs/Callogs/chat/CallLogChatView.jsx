@@ -1,13 +1,13 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Box } from "@mui/material";
 import CallLogMessageList, { parseCommentsData, deduplicateComments } from "./CallLogMessageList";
 import CallLogCommentInput from "./CallLogCommentInput";
 import CallLogClosedNotice, {
-  isCallLogClosed,
   getCallLogCommentState,
   ActiveCallLiveBanner,
 } from "./CallLogClosedNotice";
 import { commentUpdates$ } from "../../../../rxjs/commentEvents";
+import { getLocalISOString } from "../../../../utils/dateFormatter";
 
 const CallLogChatView = ({
   logData,
@@ -16,7 +16,10 @@ const CallLogChatView = ({
   onOpenRating,
   onCommentSuccess,
 }) => {
-  const [localComments, setLocalComments] = useState([]);
+  const scrollContainerRef = useRef(null);
+  const [localComments, setLocalComments] = useState(() => {
+    return logData?.comment ? parseCommentsData(logData.comment) : [];
+  });
 
   useEffect(() => {
     if (logData?.comment) {
@@ -30,7 +33,8 @@ const CallLogChatView = ({
           const isOpt =
             p.isOptimistic ||
             String(p.id).startsWith("temp-") ||
-            String(p.id).startsWith("optimistic-");
+            String(p.id).startsWith("optimistic-") ||
+            String(p.id).startsWith("local-");
           if (!isOpt) return false;
 
           const pText = (p.text || p.comment || "").trim();
@@ -73,32 +77,44 @@ const CallLogChatView = ({
             ? 1
             : 0;
 
+        const rawTime = (commentData.CreatedDate || commentData.time || getLocalISOString()).toString().replace(/Z$/i, "").replace(" ", "T");
+
         const newComment = {
           id: commentData.id || `comment-${Date.now()}`,
           text: rawText,
           comment: rawText,
-          time: commentData.CreatedDate || commentData.time || new Date().toISOString(),
-          CreatedDate: commentData.CreatedDate || commentData.time || new Date().toISOString(),
+          time: rawTime,
+          CreatedDate: rawTime,
           Name: commentData.Name || (isClient ? currentUser?.fullName || currentUser?.firstname || "You" : "Support Agent"),
           IsClient: isClient,
           isClient: isClient,
           img: rawFile,
           FilePath: rawFile,
+          isNew: true,
         };
 
         setLocalComments((prev) => {
           // Check if an existing item has the same real ID or matching content
           const existsIndex = prev.findIndex((c) => {
             if (newComment.id && c.id && String(c.id) === String(newComment.id)) return true;
-            const cText = (c.text || c.comment || "").trim();
-            const cFile = (c.FilePath || c.img || "").trim();
-            return cText === rawText && cFile === rawFile;
+            if (String(c.id).startsWith("temp-") || String(c.id).startsWith("optimistic-") || String(c.id).startsWith("local-")) {
+              const cText = (c.text || c.comment || "").trim();
+              const cFile = (c.FilePath || c.img || "").trim();
+              return cText === rawText && cFile === rawFile;
+            }
+            return false;
           });
 
           if (existsIndex >= 0) {
             // Replace matching (e.g. optimistic) item with confirmed server item
             const updated = [...prev];
-            updated[existsIndex] = newComment;
+            updated[existsIndex] = {
+              ...prev[existsIndex],
+              ...newComment,
+              id: newComment.id || prev[existsIndex].id,
+              time: newComment.time || prev[existsIndex].time,
+              isNew: false, // Don't re-animate already visible optimistic message
+            };
             return deduplicateComments(updated);
           }
           return deduplicateComments([...prev, newComment]);
@@ -135,6 +151,7 @@ const CallLogChatView = ({
 
       {/* Scrollable messages container */}
       <Box
+        ref={scrollContainerRef}
         sx={{
           flex: 1,
           minHeight: 0,
@@ -150,6 +167,7 @@ const CallLogChatView = ({
           currentUser={currentUser}
           logData={logData}
           onPreviewFile={onPreviewFile}
+          scrollContainerRef={scrollContainerRef}
         />
       </Box>
 

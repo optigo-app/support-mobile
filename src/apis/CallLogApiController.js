@@ -3,7 +3,7 @@ import { BaseAPI, ApiError } from "./BaseAPI";
 class CallLogApi extends BaseAPI {
   static serviceName = "CallLog";
 
-  static async requestToApi({ mode, params, yearCode, functionName, socketEvent   ,signal}) {
+  static async requestToApi({ mode, params, yearCode, functionName, socketEvent, signal }) {
     return super.requestToApi({
       mode,
       params,
@@ -16,7 +16,7 @@ class CallLogApi extends BaseAPI {
   }
 
   // Fetch Call Logs
-  static async getCallLogs({ statusId, projectId, filter, startDate, endDate, searchTerm, page, pageSize ,signal }) {
+  static async getCallLogs({ statusId, projectId, filter, startDate, endDate, searchTerm, page, pageSize, signal }) {
     try {
       const params = {
         StatusId: statusId,
@@ -58,7 +58,7 @@ class CallLogApi extends BaseAPI {
     }
   }
 
-    // Get Dashboard Data
+  // Get Dashboard Data
   static async getDashboardData() {
     try {
       const params = {};
@@ -159,6 +159,7 @@ class CallLogApi extends BaseAPI {
         mode: "CALLSTART",
         params,
         functionName: "CALLSTART",
+        socketEvent: "CALLSTART",
       });
       return response;
     } catch (error) {

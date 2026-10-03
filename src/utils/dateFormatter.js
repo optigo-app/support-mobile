@@ -12,6 +12,13 @@ dayjs.extend(isToday);      // Boolean checks
 dayjs.extend(isYesterday);  // Boolean checks
 dayjs.extend(advancedFormat); // For Ordinals (1st, 2nd)
 
+export const getLocalISOString = () => {
+  const now = new Date();
+  const pad = (n) => String(n).padStart(2, "0");
+  const padMs = (n) => String(n).padStart(3, "0");
+  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}.${padMs(now.getMilliseconds())}`;
+};
+
 /**
  * Robust Date Formatter
  * @param {string | Date} dateString - The date string (e.g., "2025-12-03 17:16:11")
@@ -34,13 +41,12 @@ export const formatRobustDate = (dateString) => {
     };
   }
 
-  // 1. Robust Parsing
-  let date = dayjs(dateString);
-  
-  // If invalid and string, try to fix common issue where local time has Z
-  if (!date.isValid() && typeof dateString === "string") {
-    date = dayjs(dateString.replace(/Z$/, ""));
+  // 1. Robust Parsing - strip trailing 'Z' so local time isn't incorrectly shifted by UTC offset
+  let cleanInput = dateString;
+  if (typeof cleanInput === "string") {
+    cleanInput = cleanInput.trim().replace(/Z$/i, "");
   }
+  let date = dayjs(cleanInput);
   
   // Try parsing as number if it looks like one
   if (!date.isValid() && !isNaN(Number(dateString))) {

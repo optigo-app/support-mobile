@@ -164,20 +164,16 @@ const Dashboard = () => {
             </Box>
 
             {/* RIGHT: Search */}
-            <BadgeBar badgeContent={5}
-              color="primary"
+            <IconButton
+              onClick={() => setTabId(6)}
+              sx={{
+                width: { xs: 40, sm: 44 },
+                height: { xs: 40, sm: 44 },
+                bgcolor: "rgba(102, 126, 234, 0.1)",
+              }}
             >
-              <IconButton
-                onClick={() => setTabId(6)}
-                sx={{
-                  width: { xs: 40, sm: 44 },
-                  height: { xs: 40, sm: 44 },
-                  bgcolor: "rgba(102, 126, 234, 0.1)",
-                }}
-              >
-                <NotificationsActiveRoundedIcon sx={{ fontSize: { xs: 20, sm: 22 }, color: "#667eea" }} />
-              </IconButton>
-            </BadgeBar>
+              <NotificationsActiveRoundedIcon sx={{ fontSize: { xs: 20, sm: 22 }, color: "#667eea" }} />
+            </IconButton>
           </Box>
         </Box>
 
