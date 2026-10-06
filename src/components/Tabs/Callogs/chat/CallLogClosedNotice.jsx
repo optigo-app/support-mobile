@@ -11,6 +11,8 @@ export const isCallLogClosed = (logData) => {
   const status = String(
     logData?.Estatus ||
     logData?.estatus ||
+    logData?.ExternalStatus ||
+    logData?.externalStatus ||
     logData?.status ||
     ""
   ).toLowerCase().trim();
@@ -287,23 +289,15 @@ export const ActiveCallLiveBanner = ({ logData }) => {
 };
 
 export const getCallLogCommentState = (logData) => {
-  if (!logData) return { canComment: false, state: "queue" };
+  if (!logData) return { canComment: true, state: "active" };
+
+  // Only lock when external status is explicitly completed, solved, or closed
   const isClosed = isCallLogClosed(logData);
   if (isClosed) {
     return { canComment: false, state: "closed" };
   }
-  const isAccepted = isCallLogAccepted(logData);
-  if (!isAccepted) {
-    return { canComment: false, state: "queue" };
-  }
-  const isRunning = isCallRunning(logData);
-  if (isRunning) {
-    return { canComment: false, state: "running" };
-  }
-  const hasEnded = hasCallLogStartedAndEnded(logData);
-  if (!hasEnded) {
-    return { canComment: false, state: "picked" };
-  }
+
+  // Unlocked by default: user can add comments at any time until call is completed
   return { canComment: true, state: "active" };
 };
 

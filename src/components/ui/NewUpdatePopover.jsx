@@ -20,9 +20,13 @@ const NewUpdatePopup = ({
   const mainColor = isSuccess ? '#2e7d32' : '#1565c0'; // Green or Blue
   const IconComponent = isSuccess ? CheckCircleIcon : InfoIcon;
 
-  const onClose = () => {
-    setHasNewUpdate(false)
-  }
+  const onClose = (e) => {
+    if (e && e.stopPropagation) {
+      e.stopPropagation();
+      e.preventDefault();
+    }
+    setHasNewUpdate(false);
+  };
 
   const handleRefreshClick = () => {
     // 1. Trigger the actual refresh logic
@@ -34,10 +38,11 @@ const NewUpdatePopup = ({
   return (
     <Snackbar
       open={hasNewUpdate}
+      onClose={onClose}
       anchorOrigin={{ vertical: "top", horizontal: "center" }}
       // Prevent automatic closing if you want it to stay until clicked, 
       // otherwise add autoHideDuration={6000}
-      sx={{ marginTop: 2 }}
+      sx={{ marginTop: 2, zIndex: 99999 }}
     >
       <Paper
         elevation={4}

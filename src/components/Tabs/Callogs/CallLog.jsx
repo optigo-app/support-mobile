@@ -43,7 +43,17 @@ const CallLogsApp = () => {
     if (callIdInUrl) {
       const log = callLog.find((item) => String(item.sr) === String(callIdInUrl));
       if (log) {
-        if (selectedLog?.sr !== log.sr || selectedLog?.comment !== log.comment || selectedLog !== log) {
+        if (
+          selectedLog?.sr !== log.sr ||
+          selectedLog?.comment !== log.comment ||
+          selectedLog?.Estatus !== log.Estatus ||
+          selectedLog?.status !== log.status ||
+          selectedLog?.receivedBy !== log.receivedBy ||
+          selectedLog?.AssignedEmpName !== log.AssignedEmpName ||
+          selectedLog?.callStart !== log.callStart ||
+          selectedLog?.callClosed !== log.callClosed ||
+          selectedLog?.CallDuration !== log.CallDuration
+        ) {
           setSelectedLog(log);
           setOpen(true);
         }
@@ -222,11 +232,11 @@ const CallLogsApp = () => {
       setSelectedLog((prev) =>
         prev && String(prev.sr) === String(targetId)
           ? {
-              ...prev,
-              rating: feedback,
-              ratingByCustomer: feedback,
-              Rating: feedback,
-            }
+            ...prev,
+            rating: feedback,
+            ratingByCustomer: feedback,
+            Rating: feedback,
+          }
           : prev
       );
       // Cleanly close the rating popup (keep the call details drawer open)
@@ -252,11 +262,6 @@ const CallLogsApp = () => {
         onRefresh={refreshCallLogs}
         isRefreshing={isFetching}
         onClearSearch={() => setSearchQuery("")}
-      />
-
-      <NewUpdatePopup
-        Title={'Call'}
-        hasNewUpdate={hasNewUpdate} refreshCallLogs={refreshCallLogs} setHasNewUpdate={setHasNewUpdate}
       />
       <EmailScrollArea ref={scrollRef}>
         {isFetching && visibleLogs?.length === 0 ? (

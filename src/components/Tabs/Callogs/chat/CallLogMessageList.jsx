@@ -1,7 +1,52 @@
-import React, { useRef, useEffect } from "react";
-import { Box, Typography, Stack } from "@mui/material";
+import React, { useRef, useEffect, useMemo } from "react";
+import { Box, Typography } from "@mui/material";
 import QuestionAnswerRoundedIcon from "@mui/icons-material/QuestionAnswerRounded";
 import CallLogMessageItem from "./CallLogMessageItem";
+import { getLocalISOString } from "../../../../utils/dateFormatter";
+
+export const getCommentSortTimestamp = (timeVal, fallbackIndex = 0) => {
+  if (!timeVal) return fallbackIndex;
+  const str = String(timeVal).trim();
+  if (!str || str.startsWith("1900") || str.startsWith("0000")) {
+    return fallbackIndex;
+  }
+
+  // 1. Full datetime string with year/date (contains '-' or '/')
+  if (str.includes("-") || str.includes("/")) {
+    const clean = str.replace(/Z$/i, "").replace(" ", "T");
+    const d = new Date(clean);
+    if (!isNaN(d.getTime())) {
+      return d.getTime();
+    }
+  }
+
+  // 2. Time-only string: e.g. "10:58", "10:58 AM", "15:45", "11:00 PM"
+  const match = str.match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?(?:\s*([AaPp][Mm]))?$/);
+  if (match) {
+    let hours = parseInt(match[1], 10);
+    const minutes = parseInt(match[2], 10);
+    const seconds = match[3] ? parseInt(match[3], 10) : 0;
+    const ampm = match[4]?.toUpperCase();
+
+    if (ampm === "PM" && hours < 12) hours += 12;
+    if (ampm === "AM" && hours === 12) hours = 0;
+
+    const d = new Date();
+    d.setHours(hours, minutes, seconds, 0);
+    if (!isNaN(d.getTime())) {
+      return d.getTime();
+    }
+  }
+
+  // 3. Fallback to direct parse without Z
+  const clean = str.replace(/Z$/i, "").replace(" ", "T");
+  const d = new Date(clean);
+  if (!isNaN(d.getTime())) {
+    return d.getTime();
+  }
+
+  return fallbackIndex;
+};
 
 export const parseCommentsData = (rawComment) => {
   if (!rawComment) return [];
@@ -24,7 +69,7 @@ export const parseCommentsData = (rawComment) => {
             id: 1,
             text: trimmed,
             comment: trimmed,
-            time: new Date().toISOString(),
+            time: getLocalISOString(),
             Name: "User",
             IsClient: 1,
           },
@@ -36,7 +81,7 @@ export const parseCommentsData = (rawComment) => {
           id: 1,
           text: trimmed,
           comment: trimmed,
-          time: new Date().toISOString(),
+          time: getLocalISOString(),
           Name: "User",
           IsClient: 1,
         },
@@ -51,16 +96,17 @@ export const parseCommentsData = (rawComment) => {
     if (typeof item === "string") {
       return {
         id: idx + 1,
+        orderIndex: idx,
         text: item,
         comment: item,
-        time: new Date().toISOString(),
+        time: getLocalISOString(),
         Name: "User",
         IsClient: 1,
         isClient: 1,
       };
     }
     const textVal = item.text ?? item.comment ?? item.Comments ?? item.Descr ?? "";
-    const timeVal = item.time ?? item.CreatedDate ?? item.date ?? item.entryDate ?? "";
+    const rawTime = (item.time ?? item.CreatedDate ?? item.date ?? item.entryDate ?? getLocalISOString()).toString().replace(/Z$/i, "").replace(" ", "T");
     const isClientVal =
       item.IsClient === 1 ||
       item.isClient === 1 ||
@@ -72,15 +118,17 @@ export const parseCommentsData = (rawComment) => {
     return {
       ...item,
       id: item.id || item.Id || `comment-${idx}`,
+      orderIndex: idx,
       text: textVal,
       comment: textVal,
-      time: timeVal,
-      CreatedDate: timeVal,
+      time: rawTime,
+      CreatedDate: rawTime,
       Name: item.Name || item.CreatedByName || item.userName || (isClientVal ? "Client" : "Support Agent"),
       IsClient: isClientVal,
       isClient: isClientVal,
       FilePath: item.FilePath || item.img || item.filePath || "",
       img: item.FilePath || item.img || item.filePath || "",
+      isNew: Boolean(item.isNew),
     };
   });
 
@@ -98,10 +146,10 @@ export const deduplicateComments = (comments = []) => {
     const file = (item.FilePath || item.img || "").trim();
 
     // If item has a real server ID, track it
-    const hasRealId = item.id && !String(item.id).startsWith("comment-") && !String(item.id).startsWith("temp-") && !String(item.id).startsWith("optimistic-");
+    const hasRealId = item.id && !String(item.id).startsWith("comment-") && !String(item.id).startsWith("temp-") && !String(item.id).startsWith("optimistic-") && !String(item.id).startsWith("local-");
     
     // Normalize time to a rough 60-second window to catch duplicate socket/API dispatches
-    const rawTime = item.time || item.CreatedDate || item.date || item.entryDate || "";
+    const rawTime = (item.time || item.CreatedDate || item.date || item.entryDate || "").toString().replace(/Z$/i, "").replace(" ", "T");
     let timeBucket = "";
     if (rawTime) {
       const parsedTime = new Date(rawTime).getTime();
@@ -124,26 +172,56 @@ export const deduplicateComments = (comments = []) => {
   return result;
 };
 
-const CallLogMessageList = ({ comments = [], currentUser, logData, onPreviewFile }) => {
-  const bottomRef = useRef(null);
+const CallLogMessageList = ({ comments = [], currentUser, logData, onPreviewFile, scrollContainerRef }) => {
+  const prevCountRef = useRef(0);
+  const isInitialMountRef = useRef(true);
 
   // Parse and sort comments chronologically (oldest first for natural chat flow)
-  const normalizedComments = parseCommentsData(comments).sort((a, b) => {
-    const timeA = a?.time ? new Date(a.time).getTime() : 0;
-    const timeB = b?.time ? new Date(b.time).getTime() : 0;
-    const validA = isNaN(timeA) ? 0 : timeA;
-    const validB = isNaN(timeB) ? 0 : timeB;
-    return validA - validB;
-  });
+  const normalizedComments = useMemo(() => {
+    const list = Array.isArray(comments) ? comments : parseCommentsData(comments);
+    return [...list].sort((a, b) => {
+      const timeA = getCommentSortTimestamp(a?.time || a?.CreatedDate, a?.orderIndex ?? 0);
+      const timeB = getCommentSortTimestamp(b?.time || b?.CreatedDate, b?.orderIndex ?? 0);
+      const diff = timeA - timeB;
+      if (diff !== 0) return diff;
+      return (a?.orderIndex ?? 0) - (b?.orderIndex ?? 0);
+    });
+  }, [comments]);
 
+  // Isolated scrolling: scrolls only the messages container, never the window or outer drawer!
   useEffect(() => {
-    const timer = setTimeout(() => {
-      if (bottomRef.current) {
-        bottomRef.current.scrollIntoView({ behavior: "smooth" });
+    const container = scrollContainerRef?.current;
+    if (!container) return;
+
+    if (isInitialMountRef.current) {
+      if (normalizedComments.length > 0) {
+        isInitialMountRef.current = false;
+        prevCountRef.current = normalizedComments.length;
+        // Instant jump to bottom without smooth animation lag on initial mount
+        container.scrollTop = container.scrollHeight;
       }
-    }, 50);
-    return () => clearTimeout(timer);
-  }, [normalizedComments.length]);
+      return;
+    }
+
+    const isNew = normalizedComments.length > prevCountRef.current;
+    prevCountRef.current = normalizedComments.length;
+
+    if (isNew) {
+      const scrollSmooth = () => {
+        if (!container) return;
+        container.scrollTo({
+          top: container.scrollHeight,
+          behavior: "smooth",
+        });
+      };
+      const rAF = requestAnimationFrame(scrollSmooth);
+      const timer = setTimeout(scrollSmooth, 50);
+      return () => {
+        cancelAnimationFrame(rAF);
+        clearTimeout(timer);
+      };
+    }
+  }, [normalizedComments.length, scrollContainerRef]);
 
   if (normalizedComments.length === 0) {
     return (
@@ -196,7 +274,6 @@ const CallLogMessageList = ({ comments = [], currentUser, logData, onPreviewFile
           onPreviewFile={onPreviewFile}
         />
       ))}
-      <div ref={bottomRef} />
     </Box>
   );
 };

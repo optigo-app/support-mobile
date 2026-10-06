@@ -18,6 +18,7 @@ import InsertDriveFileRoundedIcon from "@mui/icons-material/InsertDriveFileRound
 import { filesUploadApi } from "../../../../apis/UploadFille";
 import { useCallLog } from "../../../../contexts/UseCallLog";
 import { compressImagesToWebP } from "../../../../utils/ImageCompressor";
+import { getLocalISOString } from "../../../../utils/dateFormatter";
 
 const CallLogCommentInput = ({ user, callId, onCommentAdded, disabled = false }) => {
   const [comment, setComment] = useState("");
@@ -144,14 +145,15 @@ const CallLogCommentInput = ({ user, callId, onCommentAdded, disabled = false })
           Name: user?.fullName || `${user?.firstname || ""} ${user?.lastname || ""}`.trim() || "You",
           text: trimmedComment,
           comment: trimmedComment,
-          time: new Date().toISOString(),
-          CreatedDate: new Date().toISOString(),
+          time: getLocalISOString(),
+          CreatedDate: getLocalISOString(),
           img: uploadedFileUrl || null,
           FilePath: uploadedFileUrl || null,
           IsClient: 1,
           isClient: 1,
           Role: 1,
           UserId: user?.id,
+          isNew: true,
         };
         onCommentAdded(optimisticComment);
       }

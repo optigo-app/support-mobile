@@ -4,6 +4,7 @@ import CallLogApi from "../apis/CallLogApiController";
 import { useAuth } from "../contexts/AuthContext";
 import { useSocketEvent } from "../hooks/useSocketListener";
 import { commentUpdates$ } from "../rxjs/commentEvents";
+import { getLocalISOString } from "../utils/dateFormatter";
 
 const isValidCommentPayload = (data) => {
   if (!data || typeof data !== "object") return false;
@@ -16,27 +17,25 @@ const isValidCommentPayload = (data) => {
 const appendCommentToCall = (callRecord, commentPayload) => {
   if (!callRecord) return callRecord;
   const rawCommentText =
-    commentPayload.Comments ?? commentPayload.comment ?? commentPayload.text ?? "";
-
-  const isClient =
-    commentPayload.IsClient === 1 ||
-    commentPayload.isClient === 1 ||
-    commentPayload.isClient === true ||
-    commentPayload.IsClient === "1"
-      ? 1
-      : 0;
+    (commentPayload.Comments ?? commentPayload.comment ?? commentPayload.text ?? "").trim();
+  const rawFile = (commentPayload.FilePath || commentPayload.img || "").trim();
+  const rawTime = (commentPayload.CreatedDate || commentPayload.time || getLocalISOString()).toString().replace(/Z$/i, "").replace(" ", "T");
+  const isOwn = Boolean(commentPayload.isOwn);
+  const isClientVal = isOwn || commentPayload.IsClient === 1 || commentPayload.IsClient === "1" ? 1 : (commentPayload.IsClient !== undefined ? Number(commentPayload.IsClient) : 1);
 
   const commentItem = {
     id: commentPayload.id || Date.now(),
     text: rawCommentText,
     comment: rawCommentText,
-    time: commentPayload.CreatedDate || commentPayload.time || new Date().toISOString(),
-    Name: commentPayload.Name || commentPayload.CreatedByName || (isClient ? "Client" : "Support User"),
+    time: rawTime,
+    CreatedDate: rawTime,
+    Name: commentPayload.Name || commentPayload.CreatedByName || (isClientVal ? "Client" : "Support User"),
     CreatedBy: commentPayload.CreatedBy,
-    IsClient: isClient,
-    isClient: isClient,
-    img: commentPayload.FilePath || commentPayload.img || "",
-    FilePath: commentPayload.FilePath || commentPayload.img || "",
+    IsClient: isClientVal,
+    isClient: isClientVal,
+    FilePath: rawFile,
+    img: rawFile,
+    isNew: Boolean(commentPayload.isNew),
   };
 
   let existing = [];
@@ -50,21 +49,29 @@ const appendCommentToCall = (callRecord, commentPayload) => {
     existing = [...callRecord.comment];
   }
 
-  const exists = existing.some((c) => {
+  // Deduplicate by ID OR matching pending local/temp comment with same text + attachment
+  const existsIdx = existing.findIndex((c) => {
     if (commentItem.id && c.id && String(c.id) === String(commentItem.id)) {
       return true;
     }
-    const cText = (c.text || c.comment || "").trim();
-    const newText = commentItem.text.trim();
-    const cFile = (c.FilePath || c.img || "").trim();
-    const newFile = (commentItem.FilePath || commentItem.img || "").trim();
-    if (cText === newText && cFile === newFile) {
-      return true;
+    if (String(c.id).startsWith("local-") || String(c.id).startsWith("temp-") || String(c.id).startsWith("optimistic-")) {
+      const cText = (c.text || c.comment || "").trim();
+      const cFile = (c.FilePath || c.img || "").trim();
+      return cText === rawCommentText && cFile === rawFile;
     }
     return false;
   });
 
-  if (!exists) {
+  if (existsIdx !== -1) {
+    const prev = existing[existsIdx];
+    existing[existsIdx] = {
+      ...prev,
+      ...commentItem,
+      id: commentPayload.id || prev.id,
+      IsClient: isOwn ? 1 : (commentPayload.IsClient !== undefined ? Number(commentPayload.IsClient) : prev.IsClient ?? 1),
+      time: commentItem.time || prev.time,
+    };
+  } else {
     existing.push(commentItem);
   }
 
@@ -79,7 +86,6 @@ const CallLogContext = createContext(null);
 
 export function CallLogProvider(props) {
   const { user } = useAuth();
-  console.log(user, "user")
 
   // Data States
   const [callLog, setCallLog] = useState([]);
@@ -300,19 +306,35 @@ export function CallLogProvider(props) {
     [user?.id]
   );
 
-  console.log(user, "call")
 
   useSocketEvent("AddCall", (data) => {
-    console.log(data, "data")
-    if (data?.company === user?.company) {
-      setHasNewUpdate(true);
-      setrefreshList((prev) => !prev);
-    } else {
+    console.log("AddCall event received:", data);
+    if (!data) return;
+    if (user?.company && data?.company && data.company.toLowerCase() !== user.company.toLowerCase()) {
       return;
     }
+    const targetId = data?.sr || data?.id || data?.CallLogid;
+    if (!targetId) return;
+
+    // Seamless in-place prepend at the very start of the list
+    setCallLog((prev) => {
+      if (!Array.isArray(prev)) return [data];
+      const exists = prev.some(
+        (c) => String(c?.sr) === String(targetId) || String(c?.id) === String(targetId)
+      );
+      if (exists) {
+        return prev.map((c) =>
+          String(c?.sr) === String(targetId) || String(c?.id) === String(targetId)
+            ? { ...c, ...data }
+            : c
+        );
+      }
+      return [data, ...prev];
+    });
+    setTotalCount((prev) => prev + 1);
   });
 
-    // RxJS subscription for smooth real-time comment updates
+  // RxJS subscription for smooth real-time comment updates
   useEffect(() => {
     const sub = commentUpdates$.subscribe((commentData) => {
       if (!isValidCommentPayload(commentData)) return;
@@ -338,13 +360,24 @@ export function CallLogProvider(props) {
   useSocketEvent("ADDCOMMENTS", (data) => {
     console.log("ADDCOMMENTS event received in support-mobile:", data);
     if (!isValidCommentPayload(data)) return;
-    commentUpdates$.next(data);
-  });
+    const currentUserName =
+      `${user?.firstname || ""} ${user?.lastname || ""}`.trim() ||
+      user?.fullName ||
+      user?.Name ||
+      "";
+    const isOwn = Boolean(user?.id && String(data.CreatedBy) === String(user.id));
+    const isClientVal = isOwn || data.IsClient === 1 || data.IsClient === "1" ? 1 : (data.IsClient !== undefined ? Number(data.IsClient) : 1);
+    const enrichedName =
+      data.Name ||
+      (isOwn ? currentUserName : isClientVal ? "Client" : "Support User");
 
-  // useSocketEvent("CallComment", (data) => {
-  //   console.log("CallComment event received in support-mobile:", data);
-  //   setrefreshList((prev) => !prev);
-  // });
+    commentUpdates$.next({
+      ...data,
+      Name: enrichedName,
+      isOwn: isOwn,
+      IsClient: isClientVal,
+    });
+  });
 
   useSocketEvent("AcceptCall", (data) => {
     console.log("AcceptCall event received:", data);
@@ -352,78 +385,99 @@ export function CallLogProvider(props) {
     if (targetId) {
       setCallLog((prev) =>
         prev.map((c) =>
-          String(c?.sr) === String(targetId)
-            ? { ...c, ...data, receivedBy: data?.receivedBy || data?.AssignedEmpName || c?.receivedBy }
-            : c
-        )
-      );
-    }
-    setHasNewUpdate(true);
-    setrefreshList((prev) => !prev);
-  });
-
-  useSocketEvent("StartCall", (data) => {
-    console.log("StartCall event received:", data);
-    const targetId = data?.sr || data?.CallLogid || data?.id;
-    if (targetId) {
-      setCallLog((prev) =>
-        prev.map((c) =>
-          String(c?.sr) === String(targetId)
+          String(c?.sr) === String(targetId) || String(c?.id) === String(targetId)
             ? {
                 ...c,
                 ...data,
-                callStart: data?.callStart || new Date().toISOString(),
-                Estatus: "Running",
-                status: "In Progress",
+                receivedBy: data?.receivedBy || data?.AssignedEmpName || c?.receivedBy,
+                AssignedEmpName: data?.AssignedEmpName || data?.receivedBy || c?.AssignedEmpName,
               }
             : c
         )
       );
     }
-    setHasNewUpdate(true);
-    setrefreshList((prev) => !prev);
   });
 
-  useSocketEvent("CALLSTART", (data) => {
-    console.log("CALLSTART event received:", data);
-    setrefreshList((prev) => !prev);
-  });
+  const handleCallStart = (data, eventName) => {
+    console.log(`${eventName} event received:`, data);
+    const targetId = data?.sr || data?.CallLogid || data?.id;
+    if (!targetId) return;
+
+    setCallLog((prev) =>
+      prev.map((c) => {
+        if (String(c?.sr) === String(targetId) || String(c?.id) === String(targetId)) {
+          return {
+            ...c,
+            ...data,
+            callStart: data?.callStart || c?.callStart || new Date().toISOString(),
+            Estatus: data?.Estatus || "Running",
+            status: data?.status || "In Progress",
+            receivedBy: data?.receivedBy || c?.receivedBy || data?.AssignedEmpName || c?.AssignedEmpName,
+            AssignedEmpName: data?.AssignedEmpName || c?.AssignedEmpName || data?.receivedBy || c?.receivedBy,
+          };
+        }
+        return c;
+      })
+    );
+  };
+
+  useSocketEvent("StartCall", (data) => handleCallStart(data, "StartCall"));
+  useSocketEvent("CALLSTART", (data) => handleCallStart(data, "CALLSTART"));
 
   useSocketEvent("ForwardedCall", (data) => {
     console.log("ForwardedCall event received:", data);
-    if (data?.company === user?.company) {
-      setHasNewUpdate(true);
-      setrefreshList((prev) => !prev);
+    if (user?.company && data?.company && data.company.toLowerCase() !== user.company.toLowerCase()) {
+      return;
     }
-  });
-
-
-  useSocketEvent("EndCall", (data) => {
-    console.log("EndCall event received:", data);
     const targetId = data?.sr || data?.CallLogid || data?.id;
     if (targetId) {
-      setCallLog((prev) =>
-        prev.map((c) =>
-          String(c?.sr) === String(targetId)
-            ? {
-                ...c,
-                ...data,
-                callClosed: data?.callClosed || new Date().toISOString(),
-                Estatus: "Completed",
-                status: "Solved",
-              }
-            : c
-        )
-      );
+      setCallLog((prev) => {
+        const exists = prev.some(
+          (c) => String(c?.sr) === String(targetId) || String(c?.id) === String(targetId)
+        );
+        if (exists) {
+          return prev.map((c) =>
+            String(c?.sr) === String(targetId) || String(c?.id) === String(targetId)
+              ? {
+                  ...c,
+                  ...data,
+                  receivedBy: data?.receivedBy || data?.AssignedEmpName || c?.receivedBy,
+                  AssignedEmpName: data?.AssignedEmpName || data?.receivedBy || c?.AssignedEmpName,
+                }
+              : c
+          );
+        }
+        return [data, ...prev];
+      });
     }
-    setHasNewUpdate(true);
-    setrefreshList((prev) => !prev);
   });
 
-  useSocketEvent("CALLEND", (data) => {
-    console.log("CALLEND event received:", data);
-    setrefreshList((prev) => !prev);
-  });
+  const handleCallEnd = (data, eventName) => {
+    console.log(`${eventName} event received:`, data);
+    const targetId = data?.sr || data?.CallLogid || data?.id;
+    if (!targetId) return;
+
+    setCallLog((prev) =>
+      prev.map((c) => {
+        if (String(c?.sr) === String(targetId) || String(c?.id) === String(targetId)) {
+          return {
+            ...c,
+            ...data,
+            callClosed: data?.callClosed || c?.callClosed || new Date().toISOString(),
+            CallDuration: data?.CallDuration || data?.duration || c?.CallDuration || "",
+            Estatus: data?.Estatus || "Completed",
+            status: data?.status || "Solved",
+            receivedBy: data?.receivedBy || c?.receivedBy || data?.AssignedEmpName || c?.AssignedEmpName,
+            AssignedEmpName: data?.AssignedEmpName || c?.AssignedEmpName || data?.receivedBy || c?.receivedBy,
+          };
+        }
+        return c;
+      })
+    );
+  };
+
+  useSocketEvent("EndCall", (data) => handleCallEnd(data, "EndCall"));
+  useSocketEvent("CALLEND", (data) => handleCallEnd(data, "CALLEND"));
 
 
 
