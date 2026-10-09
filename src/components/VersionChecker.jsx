@@ -1,127 +1,125 @@
-import React, { useEffect, useRef } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
+import { Alert, Button, Snackbar } from "@mui/material";
 import localVersionData from "../version.json";
 
-/**
- * VersionChecker
- * 
- * Solves the issue where mobile WebViews keep running stale versions of the website.
- * 
- * Features:
- * 1. Checks `/version.json` with cache-busting timestamp `?t=${Date.now()}`.
- * 2. Triggers on:
- *    - Initial mount (delayed 3s so startup isn't blocked)
- *    - Visibility change (crucial for mobile WebView when user returns to app)
- *    - Window focus
- *    - Periodic interval (every 45s)
- * 3. When a new version is detected:
- *    - Cleans CacheStorage and unregisters stale service workers
- *    - Forces a clean reload with a cache-busting query parameter `_v`
- */
-const CHECK_INTERVAL_MS = 45000; // 45 seconds
+const CHECK_INTERVAL_MS = 45000;
+const REQUEST_TIMEOUT_MS = 12000;
+
+const getBuildId = (versionData) =>
+  versionData?.fullVersion || versionData?.buildHash || versionData?.version;
 
 export const useVersionChecker = () => {
-  const isUpdatingRef = useRef(false);
+  const [updateAvailable, setUpdateAvailable] = useState(false);
+  const [noticeOpen, setNoticeOpen] = useState(false);
+  const [latestBuildId, setLatestBuildId] = useState("");
+  const isCheckingRef = useRef(false);
+
+  const checkForUpdate = useCallback(async () => {
+    if (isCheckingRef.current) return;
+    isCheckingRef.current = true;
+    const controller = new AbortController();
+    const timeoutId = window.setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+
+    try {
+      const publicUrl = (process.env.PUBLIC_URL || "").replace(/\/$/, "");
+      const versionUrl = new URL(`${publicUrl}/version.json`, window.location.origin);
+      versionUrl.searchParams.set("t", Date.now().toString());
+
+      const response = await fetch(versionUrl.toString(), {
+        method: "GET",
+        cache: "no-store",
+        signal: controller.signal,
+        headers: {
+          "Cache-Control": "no-cache, no-store, must-revalidate",
+          Pragma: "no-cache",
+          Expires: "0",
+        },
+      });
+
+      if (!response.ok) return;
+
+      const serverVersionData = await response.json();
+      const serverBuildId = getBuildId(serverVersionData);
+      const currentBuildId = getBuildId(localVersionData);
+
+      if (serverBuildId && currentBuildId && serverBuildId !== currentBuildId) {
+        setLatestBuildId(serverBuildId);
+        setUpdateAvailable(true);
+        setNoticeOpen(true);
+      }
+    } catch {
+      // Keep the running app usable when the version endpoint is unavailable.
+    } finally {
+      window.clearTimeout(timeoutId);
+      isCheckingRef.current = false;
+    }
+  }, []);
 
   useEffect(() => {
-    const currentFullVersion = localVersionData?.fullVersion || localVersionData?.version;
-    const currentHash = localVersionData?.buildHash;
-
-    const performVersionCheck = async () => {
-      if (isUpdatingRef.current) return;
-      if (typeof window === "undefined" || !navigator.onLine) return;
-
-      try {
-        const response = await fetch(`/version.json?t=${Date.now()}`, {
-          method: "GET",
-          cache: "no-store",
-          headers: {
-            "Cache-Control": "no-cache, no-store, must-revalidate",
-            Pragma: "no-cache",
-            Expires: "0",
-          },
-        });
-
-        if (!response.ok) return;
-
-        const serverVersionData = await response.json();
-        const serverFullVersion = serverVersionData?.fullVersion || serverVersionData?.version;
-        const serverHash = serverVersionData?.buildHash;
-
-        const isNewVersion =
-          (serverFullVersion && serverFullVersion !== currentFullVersion) ||
-          (serverHash && serverHash !== currentHash);
-
-        if (isNewVersion) {
-          console.warn(
-            `[VersionChecker] New build detected on server! (Server: ${serverFullVersion || serverHash} vs Local: ${currentFullVersion || currentHash}). Refreshing WebView...`
-          );
-          isUpdatingRef.current = true;
-
-          // 1. Clear CacheStorage if supported
-          if ("caches" in window) {
-            try {
-              const cacheKeys = await window.caches.keys();
-              await Promise.all(cacheKeys.map((key) => window.caches.delete(key)));
-            } catch (err) {
-              console.error("[VersionChecker] Error clearing caches:", err);
-            }
-          }
-
-          // 2. Unregister any stale service workers
-          if ("serviceWorker" in navigator) {
-            try {
-              const registrations = await navigator.serviceWorker.getRegistrations();
-              for (const registration of registrations) {
-                await registration.unregister();
-              }
-            } catch (err) {
-              console.error("[VersionChecker] Error unregistering service workers:", err);
-            }
-          }
-
-          // 3. Force fresh reload in Mobile WebView
-          // Appending _v timestamp query param forces Android/iOS WebViews to bypass disk cache
-          try {
-            const currentUrl = new URL(window.location.href);
-            currentUrl.searchParams.set("_v", serverHash || Date.now().toString());
-            window.location.replace(currentUrl.toString());
-          } catch (e) {
-            window.location.reload(true);
-          }
-        }
-      } catch (err) {
-        // Network error or offline - silently ignore
-      }
-    };
-
-    // Initial check after 3 seconds
-    const initialTimer = setTimeout(performVersionCheck, 3000);
-
-    // Periodic check interval
-    const intervalId = setInterval(performVersionCheck, CHECK_INTERVAL_MS);
-
-    // Mobile WebView check: when user switches back to the app / unlocks phone
+    const initialTimer = window.setTimeout(checkForUpdate, 3000);
+    const intervalId = window.setInterval(checkForUpdate, CHECK_INTERVAL_MS);
     const handleVisibilityChange = () => {
-      if (document.visibilityState === "visible") {
-        performVersionCheck();
-      }
+      if (document.visibilityState === "visible") checkForUpdate();
     };
 
-    window.addEventListener("visibilitychange", handleVisibilityChange);
-    window.addEventListener("focus", performVersionCheck);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    window.addEventListener("focus", checkForUpdate);
 
     return () => {
-      clearTimeout(initialTimer);
-      clearInterval(intervalId);
-      window.removeEventListener("visibilitychange", handleVisibilityChange);
-      window.removeEventListener("focus", performVersionCheck);
+      window.clearTimeout(initialTimer);
+      window.clearInterval(intervalId);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.removeEventListener("focus", checkForUpdate);
     };
+  }, [checkForUpdate]);
+
+  const applyUpdate = useCallback(() => {
+    const currentUrl = new URL(window.location.href);
+    currentUrl.searchParams.set("_build", latestBuildId || Date.now().toString());
+    window.location.replace(currentUrl.toString());
+  }, [latestBuildId]);
+
+  const deferUpdate = useCallback(() => {
+    // Keep the update pending and surface the notice again on the next check.
+    setNoticeOpen(false);
   }, []);
+
+  return {
+    updateAvailable,
+    noticeOpen,
+    applyUpdate,
+    deferUpdate,
+  };
 };
 
 export const VersionChecker = () => {
-  useVersionChecker();
-  return null;
+  const { updateAvailable, noticeOpen, applyUpdate, deferUpdate } = useVersionChecker();
+
+  return (
+    <Snackbar
+      open={updateAvailable && noticeOpen}
+      anchorOrigin={{ vertical: "top", horizontal: "center" }}
+      sx={{ mt: 1, zIndex: (theme) => theme.zIndex.tooltip }}
+    >
+      <Alert
+        severity="info"
+        variant="filled"
+        action={
+          <>
+            <Button color="inherit" size="small" onClick={deferUpdate}>
+              Later
+            </Button>
+            <Button color="inherit" size="small" onClick={applyUpdate}>
+              Update now
+            </Button>
+          </>
+        }
+        sx={{ alignItems: "center", width: "100%" }}
+      >
+        New version detected. Update now to get the latest version.
+      </Alert>
+    </Snackbar>
+  );
 };
 
 export default VersionChecker;

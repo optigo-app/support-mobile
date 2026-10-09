@@ -1,5 +1,18 @@
 # Getting Started with Create React App
 
+## Mobile WebView updates and hosting cache policy
+
+The app checks `version.json` on startup, while it is open, and when it returns to the foreground. When a newer build is detected, it shows an update notice. **Update now** reloads the current URL with a build-specific query parameter; **Later** defers the notice until the next version check. The update flow does not clear Cache Storage or unregister service workers.
+
+For that check and reload to reach a newly published build, configure the web server or CDN to send these response headers:
+
+| Response | Cache policy |
+| --- | --- |
+| `index.html` and `version.json` | `Cache-Control: no-cache, no-store, must-revalidate` |
+| Fingerprinted files under `static/` | `Cache-Control: public, max-age=31536000, immutable` |
+
+These must be HTTP response headers; HTML `Cache-Control` meta tags do not set server cache policy. Upload a complete build before switching traffic to it, and publish the HTML, `version.json`, and referenced assets together so clients cannot observe mismatched build files. The Flutter WebView's own cache and reload configuration is outside this repository and may also need review if it serves cached responses despite these headers.
+
 This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
 
 ## Available Scripts
