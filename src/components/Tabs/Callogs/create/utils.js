@@ -59,8 +59,8 @@ const getCurrentDateTime = () => {
 
 // --- Memoized Child Components (Prevents unneeded re-renders) ---
 
-const CustomField = memo(({ label, placeholder, multiline, icon, value, readOnly, name, onChange, disable, required, error, helperText }) => (
-  <Box sx={{ mb: 3 }}>
+const CustomField = memo(({ label, placeholder, multiline, icon, value, readOnly, name, onChange, onKeyDown, disable, required, error, helperText }) => (
+  <Box sx={{ mb: 2 }}>
     <FormLabel sx={{ ...labelStyle, display: "flex", alignItems: "center", gap: "2px" }}>
       {label}
       {required && (
@@ -87,13 +87,14 @@ const CustomField = memo(({ label, placeholder, multiline, icon, value, readOnly
         name={name}
         placeholder={placeholder}
         multiline={multiline}
-        minRows={multiline ? 5 : 1}
+        minRows={multiline ? 4 : 1}
         value={value}
         readOnly={readOnly}
         disabled={disable}
         onChange={onChange}
+        onKeyDown={onKeyDown}
         sx={{
-          fontSize: "15px",
+          fontSize: { xs: "16px", sm: "15px" },
           fontWeight: 500,
           color: colors.textMain,
           "& input::placeholder, & textarea::placeholder": { opacity: 0.6 },

@@ -122,7 +122,10 @@ export function CallLogProvider(props) {
   const INTERNAL_STATUS_LIST = "INTERNAL_STATUS";
   const INTERNAL_ESTATUS_LIST = "INTERNAL_ESTATUS";
 
-  const companyOptions = COMPANY_LIST.map((option) => ({ label: option?.ProjectCode, value: option?.ProjectID })) || [];
+  const companyOptions = useMemo(
+    () => COMPANY_LIST.map((option) => ({ label: option?.ProjectCode, value: option?.ProjectID })) || [],
+    [COMPANY_LIST]
+  );
   const departmentsNames = (EMPLOYEE_LIST && Object.groupBy?.(EMPLOYEE_LIST, (emp) => emp?.designation)) || {};
   const forwardOption = Object.entries(departmentsNames).flatMap(([designation, people]) => people.map((emp) => ({ designation, person: emp?.user, id: `${emp?.DesignaitonId},${emp?.userid}` })));
 
@@ -288,13 +291,16 @@ export function CallLogProvider(props) {
         );
         const updatedRecord = data?.rd?.[0] || data?.rd1?.[0] || data?.Data?.rd?.[0];
         if (updatedRecord) {
-          setCallLog((prev) =>
-            prev.map((item) =>
-              String(item.sr) === String(callId)
-                ? { ...item, ...updatedRecord }
-                : item
-            )
-          );
+          setCallLog((prev) => {
+            if (!Array.isArray(prev)) return prev;
+            const targetIdx = prev.findIndex((item) => String(item.sr) === String(callId));
+            if (targetIdx !== -1) {
+              const updatedItem = { ...prev[targetIdx], ...updatedRecord };
+              const remaining = prev.filter((_, idx) => idx !== targetIdx);
+              return [updatedItem, ...remaining];
+            }
+            return prev;
+          });
         }
         setrefreshList((prev) => !prev);
         return data;
@@ -335,29 +341,52 @@ export function CallLogProvider(props) {
   });
 
   // RxJS subscription for smooth real-time comment updates
+  // RxJS subscription for smooth real-time comment updates & call order shuffling
   useEffect(() => {
     const sub = commentUpdates$.subscribe((commentData) => {
       if (!isValidCommentPayload(commentData)) return;
       const callId = commentData.CallLogId ?? commentData.sr ?? commentData.callLogId;
+      if (!callId) return;
 
       setCallLog((prev) => {
         if (!Array.isArray(prev)) return prev;
-        const exists = prev.some(
+        const targetIndex = prev.findIndex(
           (c) => String(c?.sr) === String(callId) || String(c?.id) === String(callId)
         );
-        if (!exists) return prev;
-        return prev.map((c) =>
-          String(c?.sr) === String(callId) || String(c?.id) === String(callId)
-            ? { ...appendCommentToCall(c, commentData), hasNewComment: true }
-            : c
-        );
+
+        if (targetIndex !== -1) {
+          const target = prev[targetIndex];
+          const updated = {
+            ...appendCommentToCall(target, commentData),
+            hasNewComment: true,
+            lastCommentTime: Date.now(),
+          };
+          // Order shuffling: Move the updated call with the new comment to the top of the list (index 0)
+          const remaining = prev.filter((_, idx) => idx !== targetIndex);
+          return [updated, ...remaining];
+        }
+
+        // If the call log is not in the currently loaded page, fetch it asynchronously and prepend
+        CallLogApi.getCallLogs({ searchTerm: String(callId), pageSize: 1 })
+          .then((res) => {
+            const found = res?.rd?.find((item) => String(item.sr) === String(callId));
+            if (found) {
+              setCallLog((current) => {
+                if (current.some((c) => String(c?.sr) === String(callId))) return current;
+                return [{ ...appendCommentToCall(found, commentData), hasNewComment: true }, ...current];
+              });
+            }
+          })
+          .catch((e) => console.log("Failed to fetch incoming comment call:", e));
+
+        return prev;
       });
     });
 
     return () => sub.unsubscribe();
   }, []);
 
-  useSocketEvent("ADDCOMMENTS", (data) => {
+  const handleIncomingComment = (data) => {
     console.log("ADDCOMMENTS event received in support-mobile:", data);
     if (!isValidCommentPayload(data)) return;
     const currentUserName =
@@ -366,7 +395,12 @@ export function CallLogProvider(props) {
       user?.Name ||
       "";
     const isOwn = Boolean(user?.id && String(data.CreatedBy) === String(user.id));
-    const isClientVal = isOwn || data.IsClient === 1 || data.IsClient === "1" ? 1 : (data.IsClient !== undefined ? Number(data.IsClient) : 1);
+    const isClientVal =
+      isOwn || data.IsClient === 1 || data.IsClient === "1"
+        ? 1
+        : data.IsClient !== undefined
+        ? Number(data.IsClient)
+        : 1;
     const enrichedName =
       data.Name ||
       (isOwn ? currentUserName : isClientVal ? "Client" : "Support User");
@@ -377,7 +411,11 @@ export function CallLogProvider(props) {
       isOwn: isOwn,
       IsClient: isClientVal,
     });
-  });
+  };
+
+  useSocketEvent("ADDCOMMENTS", handleIncomingComment);
+  useSocketEvent("AddComments", handleIncomingComment);
+  useSocketEvent("AddComment", handleIncomingComment);
 
   useSocketEvent("AcceptCall", (data) => {
     console.log("AcceptCall event received:", data);

@@ -20,13 +20,39 @@ import { useCallLog } from "../../../../contexts/UseCallLog";
 import { compressImagesToWebP } from "../../../../utils/ImageCompressor";
 import { getLocalISOString } from "../../../../utils/dateFormatter";
 
-const CallLogCommentInput = ({ user, callId, onCommentAdded, disabled = false }) => {
+const CallLogCommentInput = ({
+  user,
+  callId,
+  onCommentAdded,
+  disabled = false,
+  onFocus,
+  onTyping,
+}) => {
   const [comment, setComment] = useState("");
   const [files, setFiles] = useState([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isCompressing, setIsCompressing] = useState(false);
+  const inputRef = useRef(null);
   const fileInputRef = useRef(null);
   const { addComment } = useCallLog();
+
+  const handleInputFocus = (e) => {
+    if (onFocus) {
+      onFocus(e);
+    }
+    setTimeout(() => {
+      try {
+        e.target?.scrollIntoView?.({ block: "nearest", behavior: "smooth" });
+      } catch (err) { }
+    }, 150);
+  };
+
+  const handleInputChange = (e) => {
+    setComment(e.target.value);
+    if (onTyping) {
+      onTyping();
+    }
+  };
 
   const handleFileUpload = async (e) => {
     const selectedFiles = Array.from(e.target.files || []);
@@ -162,17 +188,34 @@ const CallLogCommentInput = ({ user, callId, onCommentAdded, disabled = false })
       setComment("");
       setFiles([]);
 
+      // Keep focus in input immediately so user can continue writing without interruption
+      setTimeout(() => {
+        inputRef.current?.focus?.();
+      }, 30);
+
       // 4. Call context addComment
       await addComment(callId, trimmedComment, uploadedFileUrl);
     } catch (error) {
       console.error("Failed to post comment:", error);
+      // Restore the comment text so user never loses their message
+      setComment(trimmedComment);
       alert("Failed to post comment. Please try again.");
     } finally {
       setIsSubmitting(false);
+      // Maintain focus after request finishes
+      setTimeout(() => {
+        inputRef.current?.focus?.();
+      }, 50);
     }
   };
 
   const handleKeyDown = (e) => {
+    // Ignore IME composition / predictive text (e.g. while selecting word candidates)
+    if (e.nativeEvent?.isComposing || e.keyCode === 229) {
+      return;
+    }
+
+    // Send message on Enter; Shift+Enter creates a new line
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       handleSubmit();
@@ -184,8 +227,8 @@ const CallLogCommentInput = ({ user, callId, onCommentAdded, disabled = false })
   const userInitial = user?.fullName
     ? user.fullName.charAt(0).toUpperCase()
     : user?.firstname
-    ? user.firstname.charAt(0).toUpperCase()
-    : "U";
+      ? user.firstname.charAt(0).toUpperCase()
+      : "U";
 
   return (
     <Paper
@@ -223,8 +266,10 @@ const CallLogCommentInput = ({ user, callId, onCommentAdded, disabled = false })
       {/* Input Area */}
       <Box sx={{ px: 2, pt: 1.5, pb: 1 }}>
         <TextField
+          inputRef={inputRef}
           value={comment}
-          onChange={(e) => setComment(e.target.value)}
+          onChange={handleInputChange}
+          onFocus={handleInputFocus}
           onKeyDown={handleKeyDown}
           placeholder="Type a message or comment..."
           fullWidth
@@ -232,14 +277,21 @@ const CallLogCommentInput = ({ user, callId, onCommentAdded, disabled = false })
           minRows={1}
           maxRows={4}
           variant="standard"
-          disabled={isSubmitting}
+          disabled={disabled}
           InputProps={{
             disableUnderline: true,
             sx: {
-              fontSize: "0.9rem",
+              fontSize: { xs: "16px", sm: "0.9rem" },
               lineHeight: 1.45,
               color: "#1e293b",
-              "& textarea::placeholder": { color: "#94a3b8", opacity: 1 },
+              "& textarea": {
+                fontSize: { xs: "16px", sm: "0.9rem" },
+              },
+              "& textarea::placeholder": {
+                color: "#94a3b8",
+                opacity: 1,
+                fontSize: { xs: "14.5px", sm: "0.9rem" },
+              },
             },
           }}
         />

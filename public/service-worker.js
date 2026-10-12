@@ -7,6 +7,7 @@
  */
 
 const GREETING_UPDATE = "GREETING_UPDATE";
+const APP_BUILD_ID = "__APP_BUILD_ID__";
 
 // 1. Same logic as dateFormatter for consistency
 const getGreetingCategory = () => {
@@ -43,7 +44,16 @@ self.addEventListener("install", (event) => {
 
 self.addEventListener("activate", (event) => {
   console.log("PWA: Active Greeting Worker - Activated");
-  event.waitUntil(self.clients.claim());
+  event.waitUntil((async () => {
+    await self.clients.claim();
+    const clients = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
+    clients.forEach((client) => {
+      client.postMessage({
+        type: "APP_BUILD_AVAILABLE",
+        buildId: APP_BUILD_ID,
+      });
+    });
+  })());
 });
 
 // 5. Initial broadcast on start

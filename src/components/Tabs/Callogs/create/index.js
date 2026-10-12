@@ -13,11 +13,8 @@ import {
   useMediaQuery,
   CircularProgress,
   Paper,
-  Tooltip,
 } from "@mui/material";
 import {
-  KeyboardArrowDown as ArrowDownIcon,
-  ArrowForwardIosRounded as ArrowForwardIosRoundedIcon,
   AddIcCallRounded as AddIcCallRoundedIcon,
   AttachFileRounded as AttachFileRoundedIcon,
   CloseRounded as CloseRoundedIcon,
@@ -28,7 +25,8 @@ import { useAuth } from "../../../../contexts/AuthContext";
 import { useCallLog } from "../../../../contexts/UseCallLog";
 import { filesUploadApi } from "../../../../apis/UploadFille";
 import { compressImagesToWebP } from "../../../../utils/ImageCompressor";
-import { AppNameButton, CustomField, colors, getCurrentDateTime, labelStyle } from "./utils";
+import { CustomField, colors, getCurrentDateTime, labelStyle } from "./utils";
+import AppSelectDropdown from "./AppSelectDropdown";
 import ArrowBackIosRoundedIcon from "@mui/icons-material/ArrowBackIosRounded";
 
 export default function AddTaskFormDrawer({ open, onClose }) {
@@ -62,9 +60,17 @@ export default function AddTaskFormDrawer({ open, onClose }) {
     );
   }, [companyOptions, user?.companycode]);
 
-  // Initialization Logic
+  const prevOpenRef = useRef(false);
+
+  // Initialization Logic - only reset when drawer is freshly opened
   useEffect(() => {
-    if (open) {
+    if (!open) {
+      prevOpenRef.current = false;
+      return;
+    }
+
+    if (!prevOpenRef.current) {
+      prevOpenRef.current = true;
       const { date, time } = getCurrentDateTime();
 
       setFormState({
@@ -78,6 +84,14 @@ export default function AddTaskFormDrawer({ open, onClose }) {
       });
       setFiles([]);
       setErrors({ description: "" });
+    } else {
+      // If already open, safely update prefilled company or customer name if they arrive without touching description
+      setFormState((prev) => ({
+        ...prev,
+        displayCompanyName: prev.displayCompanyName || companyInfo?.label || "",
+        companyNameValue: prev.companyNameValue || companyInfo?.value || "",
+        customerName: prev.customerName || user?.fullName || "",
+      }));
     }
   }, [open, companyInfo, user?.fullName]);
 
@@ -284,19 +298,52 @@ export default function AddTaskFormDrawer({ open, onClose }) {
       {/* Scrollable Content */}
       <EmailScrollArea>
         <Container maxWidth="sm" sx={{ pt: 3, pb: 4 }}>
-          <Grid container spacing={2}>
-            <Grid item xs={6}>
-              <CustomField label="Start Date" value={formState.currentDate} icon={<ArrowDownIcon />} readOnly={true} />
+          {/* Compact Prefilled Information Card */}
+          <Paper
+            variant="outlined"
+            sx={{
+              p: 1.5,
+              mb: 2.5,
+              borderRadius: "12px",
+              bgcolor: "#f8fafc",
+              borderColor: "#e2e8f0",
+            }}
+          >
+            <Grid container spacing={1.5}>
+              <Grid item xs={6}>
+                <Typography sx={{ fontSize: "0.70rem", fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: 0.5 }}>
+                  Company
+                </Typography>
+                <Typography sx={{ fontSize: "0.82rem", fontWeight: 600, color: "#1e293b", mt: 0.2 }} noWrap>
+                  {formState.displayCompanyName || user?.companycode || "—"}
+                </Typography>
+              </Grid>
+              <Grid item xs={6}>
+                <Typography sx={{ fontSize: "0.70rem", fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: 0.5 }}>
+                  Customer
+                </Typography>
+                <Typography sx={{ fontSize: "0.82rem", fontWeight: 600, color: "#1e293b", mt: 0.2 }} noWrap>
+                  {formState.customerName || "—"}
+                </Typography>
+              </Grid>
+              <Grid item xs={6}>
+                <Typography sx={{ fontSize: "0.70rem", fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: 0.5 }}>
+                  Date
+                </Typography>
+                <Typography sx={{ fontSize: "0.80rem", fontWeight: 500, color: "#334155", mt: 0.2 }}>
+                  {formState.currentDate || "—"}
+                </Typography>
+              </Grid>
+              <Grid item xs={6}>
+                <Typography sx={{ fontSize: "0.70rem", fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: 0.5 }}>
+                  Time
+                </Typography>
+                <Typography sx={{ fontSize: "0.80rem", fontWeight: 500, color: "#334155", mt: 0.2 }}>
+                  {formState.currentTime || "—"}
+                </Typography>
+              </Grid>
             </Grid>
-            <Grid item xs={6}>
-              <CustomField label="Time" value={formState.currentTime} icon={<ArrowDownIcon />} readOnly={true} />
-            </Grid>
-          </Grid>
-
-          {/* These fields won't re-render when you type in Description because props are stable */}
-          <CustomField label="Company Name" placeholder="Company Name" name="companyNameValue" value={formState.displayCompanyName} disable={true} />
-
-          <CustomField label="Customer Name" placeholder="Customer Name" name="customerName" value={formState.customerName} disable={true} />
+          </Paper>
 
           <CustomField
             label="Description"
@@ -416,22 +463,14 @@ export default function AddTaskFormDrawer({ open, onClose }) {
             )}
           </Box>
 
-          {/* App Selection */}
-          <Box>
-            <FormLabel sx={labelStyle}>Appname</FormLabel>
-            <Stack
-              direction="row"
-              sx={{
-                mt: 2,
-                flexWrap: "wrap",
-                gap: 1,
-              }}
-            >
-              {APPNAME_LIST?.map((item) => (
-                <AppNameButton key={item.AppId} label={item?.AppName} selected={formState.selectedAppId === item?.AppId} onClick={() => handleAppSelect(item?.AppId)} />
-              ))}
-            </Stack>
-          </Box>
+          {/* Topic Selection Dropdown */}
+          <AppSelectDropdown
+            label="Topic"
+            placeholder="Select Topic"
+            appList={APPNAME_LIST}
+            selectedAppId={formState.selectedAppId}
+            onSelect={handleAppSelect}
+          />
         </Container>
       </EmailScrollArea>
 

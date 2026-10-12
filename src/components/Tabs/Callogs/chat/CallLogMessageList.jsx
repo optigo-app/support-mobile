@@ -264,7 +264,7 @@ const CallLogMessageList = ({ comments = [], currentUser, logData, onPreviewFile
   }
 
   return (
-    <Box sx={{ width: "100%", py: 1 }}>
+    <Box sx={{ width: "100%", py: 1, overscrollBehavior: "contain", touchAction: "pan-y" }}>
       {normalizedComments.map((comment, index) => (
         <CallLogMessageItem
           key={comment?.id || `comment-${index}`}

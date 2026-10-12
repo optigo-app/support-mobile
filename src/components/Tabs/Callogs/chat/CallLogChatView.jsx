@@ -125,11 +125,47 @@ const CallLogChatView = ({
     return () => sub.unsubscribe();
   }, [logData?.sr, currentUser]);
 
+  const scrollToBottom = (smooth = true) => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
+    try {
+      container.scrollTo({
+        top: container.scrollHeight,
+        behavior: smooth ? "smooth" : "auto",
+      });
+    } catch (e) {
+      container.scrollTop = container.scrollHeight;
+    }
+  };
+
+  const handleInputFocus = () => {
+    scrollToBottom(true);
+    setTimeout(() => scrollToBottom(true), 150);
+    setTimeout(() => scrollToBottom(true), 350);
+  };
+
+  // Keep latest messages visible when mobile virtual keyboard opens/closes
+  useEffect(() => {
+    if (typeof window === "undefined" || !window.visualViewport) return;
+
+    const handleViewportChange = () => {
+      scrollToBottom(false);
+      setTimeout(() => scrollToBottom(true), 120);
+    };
+
+    const vv = window.visualViewport;
+    vv.addEventListener("resize", handleViewportChange);
+    return () => {
+      vv.removeEventListener("resize", handleViewportChange);
+    };
+  }, []);
+
   const handleCommentAdded = (newComment) => {
     setLocalComments((prev) => deduplicateComments([...prev, newComment]));
     if (onCommentSuccess) {
       onCommentSuccess(newComment);
     }
+    setTimeout(() => scrollToBottom(true), 60);
   };
 
   const commentState = getCallLogCommentState(logData);
@@ -160,6 +196,8 @@ const CallLogChatView = ({
           px: { xs: 1, sm: 2 },
           pb: 1,
           WebkitOverflowScrolling: "touch",
+          overscrollBehavior: "contain",
+          touchAction: "pan-y",
         }}
       >
         <CallLogMessageList
@@ -178,6 +216,7 @@ const CallLogChatView = ({
           width: "100%",
           zIndex: 10,
           bgcolor: "#ffffff",
+          pb: "env(safe-area-inset-bottom, 0px)",
         }}
       >
         {!commentState.canComment ? (
@@ -193,6 +232,8 @@ const CallLogChatView = ({
             user={currentUser}
             callId={logData?.sr}
             onCommentAdded={handleCommentAdded}
+            onFocus={handleInputFocus}
+            onTyping={() => scrollToBottom(false)}
           />
         )}
       </Box>

@@ -108,7 +108,19 @@ const OrderDetailDrawer = ({ open, onClose, logData ,onCloseRatingOpen }) => {
       </Box>
 
       {/* --- SCROLLABLE CONTENT --- */}
-      <Box sx={{ flex: 1, overflowY: "auto", px: 3, pb: 5 }}>
+      <Box
+        sx={{
+          flex: 1,
+          minHeight: 0,
+          overflowY: "auto",
+          overflowX: "hidden",
+          px: 3,
+          pb: 5,
+          WebkitOverflowScrolling: "touch",
+          overscrollBehavior: "contain",
+          touchAction: "pan-y",
+        }}
+      >
         {/* 1. TOPIC & CLIENT CARD */}
         <Paper elevation={0} sx={{ p: 2, borderRadius: 3, border: `1px solid ${COLORS.divider}`, mb: 3 }}>
           <Stack direction="row" spacing={2} alignItems="center">

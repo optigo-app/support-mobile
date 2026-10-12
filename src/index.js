@@ -14,7 +14,7 @@ const root = ReactDOM.createRoot(document.getElementById("root"));
 root.render(
   <>
     <Suspense fallback={<div></div>}>
-      <BrowserRouter  
+      <BrowserRouter
         future={{
           v7_startTransition: true,
           v7_relativeSplatPath: true,
@@ -31,4 +31,4 @@ root.render(
   </>,
 );
 
-// serviceWorkerRegistration.register();
+serviceWorkerRegistration.register();
