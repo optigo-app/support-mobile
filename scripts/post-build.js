@@ -8,6 +8,7 @@ const buildDir = path.join(rootDir, 'build');
 const publicDir = path.join(rootDir, 'public');
 const versionJsonPath = path.join(publicDir, 'version.json');
 const buildVersionJsonPath = path.join(buildDir, 'version.json');
+const buildServiceWorkerPath = path.join(buildDir, 'service-worker.js');
 
 if (!fs.existsSync(buildDir)) {
   console.log('[Post-Build] Build directory does not exist. Skipping post-build.');
@@ -26,6 +27,26 @@ if (fs.existsSync(versionJsonPath)) {
 
 // 2. Ensure build/version.json exists
 fs.writeFileSync(buildVersionJsonPath, JSON.stringify(versionData, null, 2) + '\n', 'utf8');
+
+// Stamp the service worker so browsers detect each app release as a new worker.
+if (fs.existsSync(buildServiceWorkerPath)) {
+  const workerBuildId = versionData.fullVersion || versionData.buildHash;
+  const workerMarker = 'const APP_BUILD_ID = "__APP_BUILD_ID__";';
+  let workerContent = fs.readFileSync(buildServiceWorkerPath, 'utf8');
+
+  if (!workerBuildId || !workerContent.includes(workerMarker)) {
+    throw new Error('[Post-Build] Could not stamp service-worker.js with a valid build ID.');
+  }
+
+  workerContent = workerContent.replace(
+    workerMarker,
+    `const APP_BUILD_ID = ${JSON.stringify(workerBuildId)};`
+  );
+  fs.writeFileSync(buildServiceWorkerPath, workerContent, 'utf8');
+  console.log(`[Post-Build] Service worker stamped with build: ${workerBuildId}`);
+} else {
+  console.warn('[Post-Build] service-worker.js not found in build output.');
+}
 
 const vTag = `v=${encodeURIComponent(versionData.fullVersion || versionData.buildHash || Date.now())}`;
 

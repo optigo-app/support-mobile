@@ -1,11 +1,12 @@
 import React, { useState, useMemo, useRef, useEffect, useCallback } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Box, Typography, Avatar, Chip, ListItemButton, List, CircularProgress } from "@mui/material";
-import { CallReceivedRounded, CallMadeRounded } from "@mui/icons-material";
+import { Box, Typography, Avatar, Chip, ListItemButton, List, CircularProgress, Badge } from "@mui/material";
+import { CallReceivedRounded, CallMadeRounded, ChatBubbleOutlineRounded } from "@mui/icons-material";
 import { EmailScrollArea } from "../../ui/ScrollArea";
 import FilterDrawer from "../../ui/TicketFilterDrawer";
 import GmailStyleHeader from "../../ui/Header"; // Ensure path is correct
 import CallLogDetailPage from "./Details";
+import { parseCommentsData } from "./chat/CallLogMessageList";
 import { CALL_LOG_FILTER_DEFINITIONS } from "../../../utils/FiltersOptions";
 import { useDynamicFilters } from "../../../hooks/useDynamicFilters";
 import { useCallLog } from "../../../contexts/UseCallLog";
@@ -286,26 +287,40 @@ const CallLogsApp = () => {
                     alignItems: "flex-start",
                     gap: 1.8,
                     borderBottom: `1px solid ${COLORS?.border}`,
+                    borderLeft: log?.hasNewComment ? "3.5px solid #10B981" : "3.5px solid transparent",
                     transition: "0.2s",
-                    bgcolor: "#fff",
+                    bgcolor: log?.hasNewComment ? "rgba(16, 185, 129, 0.03)" : "#fff",
                     "&:hover": { bgcolor: "rgba(0,0,0,0.03)" },
                   }}
                 >
-                  <Avatar
+                  <Badge
+                    color="success"
+                    variant="dot"
+                    invisible={!log?.hasNewComment}
+                    overlap="circular"
+                    anchorOrigin={{ vertical: "top", horizontal: "right" }}
                     sx={{
-                      width: 40,
-                      height: 40,
-                      bgcolor: typeStyle.bg,
-                      color: typeStyle.color,
-                      mt: 0.4,
-                      boxShadow: log?.hasNewComment
-                        ? "0 0 0 2px #fff, 0 0 0 4px #4A66FF"
-                        : "none",
-                      transition: "box-shadow 0.3s ease",
+                      "& .MuiBadge-badge": {
+                        bgcolor: "#10B981",
+                        boxShadow: "0 0 0 2px #fff",
+                        width: 9,
+                        height: 9,
+                        borderRadius: "50%",
+                      },
                     }}
                   >
-                    {React.cloneElement(typeStyle.icon, { fontSize: "small" })}
-                  </Avatar>
+                    <Avatar
+                      sx={{
+                        width: 40,
+                        height: 40,
+                        bgcolor: typeStyle.bg,
+                        color: typeStyle.color,
+                        mt: 0.4,
+                      }}
+                    >
+                      {React.cloneElement(typeStyle.icon, { fontSize: "small" })}
+                    </Avatar>
+                  </Badge>
                   <Box sx={{ flex: 1, minWidth: 0, overflow: "hidden" }}>
                     <Box sx={{ display: "flex", justifyContent: "space-between", mb: 0.2 }}>
                       <Typography sx={{ fontWeight: 600, fontSize: "0.95rem", color: COLORS?.subtitle, noWrap: true }}>{log?.description || "No Description"}</Typography>
@@ -315,29 +330,14 @@ const CallLogsApp = () => {
                             sx={{
                               display: "inline-flex",
                               alignItems: "center",
-                              gap: 0.5,
-                              px: 0.8,
-                              py: 0.2,
-                              borderRadius: "10px",
+                              px: 0.7,
+                              py: 0.15,
+                              borderRadius: "6px",
                               bgcolor: "rgba(16, 185, 129, 0.12)",
                               border: "1px solid rgba(16, 185, 129, 0.3)",
                             }}
                           >
-                            <Box
-                              sx={{
-                                width: 6,
-                                height: 6,
-                                borderRadius: "50%",
-                                bgcolor: "#10B981",
-                                boxShadow: "0 0 8px #10B981",
-                                animation: "newCommentPulse 1.5s infinite",
-                                "@keyframes newCommentPulse": {
-                                  "0%, 100%": { transform: "scale(1)", opacity: 1 },
-                                  "50%": { transform: "scale(1.3)", opacity: 0.6 },
-                                },
-                              }}
-                            />
-                            <Typography sx={{ fontSize: "0.62rem", fontWeight: 800, color: "#059669", letterSpacing: 0.5 }}>
+                            <Typography sx={{ fontSize: "0.62rem", fontWeight: 700, color: "#059669", letterSpacing: 0.5, lineHeight: 1.2 }}>
                               NEW
                             </Typography>
                           </Box>
@@ -345,7 +345,52 @@ const CallLogsApp = () => {
                         <Typography sx={{ fontSize: "0.75rem", color: COLORS?.textSecondary }}>{formatted?.smart}</Typography>
                       </Box>
                     </Box>
-                    <Typography sx={{ fontSize: "0.80rem", color: COLORS?.textSecondary, display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical", overflow: "hidden", mb: 0.5 }}>{log?.appname || "No AppName"}</Typography>
+                    <Typography sx={{ fontSize: "0.80rem", color: COLORS?.textSecondary, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden", mb: 0.3 }}>{log?.appname || "No AppName"}</Typography>
+                    {(() => {
+                      const comments = parseCommentsData(log?.comment);
+                      const latestComment = comments.length > 0 ? comments[comments.length - 1] : null;
+                      if (!latestComment) return null;
+                      const isClient = latestComment.IsClient === 1 || latestComment.isClient === 1;
+                      const senderName = isClient ? "You" : (latestComment.Name || "Agent");
+                      return (
+                        <Box
+                          sx={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 0.6,
+                            mt: 0.2,
+                            mb: 0.6,
+                            px: 0.8,
+                            py: 0.3,
+                            borderRadius: "6px",
+                            bgcolor: log?.hasNewComment ? "rgba(16, 185, 129, 0.08)" : "#f8fafc",
+                            border: log?.hasNewComment ? "1px solid rgba(16, 185, 129, 0.2)" : "1px solid #f1f5f9",
+                            maxWidth: "100%",
+                          }}
+                        >
+                          <ChatBubbleOutlineRounded
+                            sx={{
+                              fontSize: 13,
+                              color: log?.hasNewComment ? "#059669" : "#94a3b8",
+                              flexShrink: 0,
+                            }}
+                          />
+                          <Typography
+                            sx={{
+                              fontSize: "0.76rem",
+                              color: log?.hasNewComment ? "#065f46" : COLORS?.textSecondary,
+                              fontWeight: log?.hasNewComment ? 600 : 400,
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                              whiteSpace: "nowrap",
+                            }}
+                          >
+                            <strong>{senderName}:</strong>{" "}
+                            {latestComment.text || (latestComment.FilePath ? "📎 Attachment" : "Message")}
+                          </Typography>
+                        </Box>
+                      );
+                    })()}
                     <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.8, alignItems: "center" }}>
                       {log?.Estatus && (
                         <Chip

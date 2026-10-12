@@ -203,12 +203,14 @@ const TrainingDetailsDrawer = ({ trainingData, open, onClose, onRatingOpen }) =>
       <SwipeableBottomDrawer open={Boolean(open)} onClose={onClose}>
         <Box
           sx={{
+            flex: 1,
+            minHeight: 0,
             px: isMobile ? 2.5 : 4,
             pb: 4,
             overflowY: "auto",
-            maxHeight: "calc(85vh - 30px)",
-            // Smooth scrolling
             WebkitOverflowScrolling: "touch",
+            overscrollBehavior: "contain",
+            touchAction: "pan-y",
             "&::-webkit-scrollbar": { display: "none" },
           }}
         >

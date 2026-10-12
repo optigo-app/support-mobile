@@ -4,6 +4,8 @@ import { Box } from "@mui/material";
 const hideScrollbar = {
   overflowY: "auto",
   WebkitOverflowScrolling: "touch",
+  overscrollBehavior: "contain",
+  touchAction: "pan-y",
 
   /* Chrome / Safari / Edge */
   "&::-webkit-scrollbar": {
@@ -23,9 +25,12 @@ const ScrollArea = ({ children, sx }) => {
     <Box
       sx={{
         flex: 1,
+        minHeight: 0,
         overflowY: "auto",
         pb: { xs: 9.5, sm: 10 },
         WebkitOverflowScrolling: "touch",
+        overscrollBehavior: "contain",
+        touchAction: "pan-y",
         bgcolor: "#fff",
         // Custom Scrollbar
         ...hideScrollbar,
@@ -48,8 +53,11 @@ export const EmailScrollArea = React.forwardRef(function EmailScrollArea(
       ref={ref}
       sx={{
         flex: 1,
+        minHeight: 0,
         overflowY: "auto",
         WebkitOverflowScrolling: "touch",
+        overscrollBehavior: "contain",
+        touchAction: "pan-y",
         bgcolor: "#fff",
         ...hideScrollbar,
         ...sx,
@@ -73,8 +81,11 @@ export const HomeScrollArea = React.forwardRef(function EmailScrollArea(
       ref={ref}
       sx={{
         flex: 1,
+        minHeight: 0,
         overflowY: "auto",
         WebkitOverflowScrolling: "touch",
+        overscrollBehavior: "contain",
+        touchAction: "pan-y",
         bgcolor: bgcolor || "#fff",
         ...hideScrollbar,
         ...sx,

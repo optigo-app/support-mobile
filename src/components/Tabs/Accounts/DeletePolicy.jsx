@@ -5,8 +5,10 @@ import {
   Paper,
   Button,
   Alert,
+  IconButton,
 } from "@mui/material";
 import AutoDeleteRoundedIcon from "@mui/icons-material/AutoDeleteRounded";
+import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
 import SwipeableBottomDrawer from "../../ui/SwipeableDrawer";
 import { DeleteAccountModal } from "../../ui/DeleteAccount";
 import { useState } from "react";
@@ -41,21 +43,32 @@ const DeleteAccountSection = ({ open, onClose, onDelete }) => {
   const [openDeleteModal, setOpenDeleteModal] = useState(false);
   return (
     <>
-    <SwipeableBottomDrawer open={open} onClose={onClose} bgcolor="#F5F5F7">
+    <SwipeableBottomDrawer open={open} onClose={onClose} bgcolor="#F5F5F7" scrollable>
       <Box
         sx={{
-          minHeight: "100vh",
+          flex: 1,
+          minHeight: 0,
+          overflowY: "auto",
+          overflowX: "hidden",
+          WebkitOverflowScrolling: "touch",
+          overscrollBehavior: "contain",
+          touchAction: "pan-y",
           px: { xs: 2, sm: 3 },
-          pt: 3,
+          pt: 1,
           pb: 10,
         }}
       >
         {/* Header */}
         <Stack spacing={1} sx={{ mb: 3 }}>
-          <Typography variant="h5" sx={{ fontWeight: 800, display: "flex", alignItems: "center", gap: 1 }}>
-            <AutoDeleteRoundedIcon color="error" />
-            Delete My Account
-          </Typography>
+          <Stack direction="row" justifyContent="space-between" alignItems="center">
+            <Typography variant="h5" sx={{ fontWeight: 800, display: "flex", alignItems: "center", gap: 1 }}>
+              <AutoDeleteRoundedIcon color="error" />
+              Delete My Account
+            </Typography>
+            <IconButton onClick={onClose} size="small" aria-label="Close" sx={{ bgcolor: "#ffffff" }}>
+              <CloseRoundedIcon fontSize="small" />
+            </IconButton>
+          </Stack>
           <Typography variant="body2" color="text.secondary">
             This action is permanent and cannot be undone.
           </Typography>

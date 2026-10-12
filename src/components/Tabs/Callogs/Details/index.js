@@ -8,11 +8,9 @@ import {
   Divider,
   Stack,
   Chip,
-  Tabs,
-  Tab,
   IconButton,
   Card,
-  Badge,
+  Tooltip,
 } from "@mui/material";
 import {
   PersonRounded,
@@ -22,11 +20,10 @@ import {
   AppsRounded,
   DescriptionRounded,
   StarRounded,
-  ChatBubbleRounded,
-  AttachFileRounded,
-  InfoRounded,
   CloseRounded,
   FilePresentRounded,
+  FullscreenRounded,
+  FullscreenExitRounded,
 } from "@mui/icons-material";
 import SwipeableBottomDrawer from "../../../ui/SwipeableDrawer";
 import RatingCard from "../../../ui/RatingCard";
@@ -36,6 +33,7 @@ import { useAuth } from "../../../../contexts/AuthContext";
 import CallLogChatView from "../chat/CallLogChatView";
 import { parseCommentsData } from "../chat/CallLogMessageList";
 import { isCallLogClosed, isCallLogAccepted } from "../chat/CallLogClosedNotice";
+import { commentUpdates$ } from "../../../../rxjs/commentEvents";
 
 const COLORS = {
   primary: "#4A66FF",
@@ -49,12 +47,42 @@ const CallLogDetailPage = ({ open, onClose, onCloseRatingOpen, logData }) => {
   const [selectedTab, setSelectedTab] = useState(1); // Default to Chat tab
   const [previewFileUrl, setPreviewFileUrl] = useState(null);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+  const [isFullScreen, setIsFullScreen] = useState(false);
+  const [hasUnreadCommentInTab, setHasUnreadCommentInTab] = useState(false);
 
   useEffect(() => {
     if (open) {
       setSelectedTab(1); // Always open Chat section first by default
+      setHasUnreadCommentInTab(false);
+    } else {
+      setIsFullScreen(false); // Reset fullscreen on close
+      setHasUnreadCommentInTab(false);
     }
   }, [open, logData?.sr]);
+
+  // Real-time comment listener for CallLogDetailPage tabs:
+  // If a new comment arrives while looking at Info or Files tab, show unread dot
+  useEffect(() => {
+    if (!open || !logData?.sr) return;
+
+    const sub = commentUpdates$.subscribe((commentData) => {
+      const callId = commentData?.CallLogId ?? commentData?.sr ?? commentData?.callLogId;
+      if (String(callId) === String(logData.sr)) {
+        if (selectedTab !== 1) {
+          setHasUnreadCommentInTab(true);
+        }
+      }
+    });
+
+    return () => sub.unsubscribe();
+  }, [open, logData?.sr, selectedTab]);
+
+  const handleSelectTab = (tabId) => {
+    setSelectedTab(tabId);
+    if (tabId === 1) {
+      setHasUnreadCommentInTab(false);
+    }
+  };
 
   const getAvatarGradient = () => "linear-gradient(135deg, #4A66FF 0%, #1D42FF 100%)";
 
@@ -106,7 +134,7 @@ const CallLogDetailPage = ({ open, onClose, onCloseRatingOpen, logData }) => {
 
   return (
     <>
-      <SwipeableBottomDrawer open={Boolean(open)} onClose={onClose}>
+      <SwipeableBottomDrawer open={Boolean(open)} onClose={onClose} fullScreen={isFullScreen}>
         {/* --- HEADER --- */}
         <Stack
           direction="row"
@@ -126,9 +154,27 @@ const CallLogDetailPage = ({ open, onClose, onCloseRatingOpen, logData }) => {
             >
               Support Call
             </Typography>
-            <Typography variant="h6" sx={{ fontWeight: 800, mt: 0.5, lineHeight: 1.2 }}>
-              CallID #{logData?.sr}
-            </Typography>
+            <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+              <Typography variant="h6" sx={{ fontWeight: 800, mt: 0.5, lineHeight: 1.2 }}>
+                CallID #{logData?.sr}
+              </Typography>
+              {hasUnreadCommentInTab && (
+                <Chip
+                  size="small"
+                  label="New message"
+                  sx={{
+                    height: 20,
+                    fontSize: "0.65rem",
+                    fontWeight: 700,
+                    bgcolor: "rgba(16, 185, 129, 0.12)",
+                    color: "#059669",
+                    borderRadius: 1,
+                    border: "1px solid rgba(16, 185, 129, 0.3)",
+                    mt: 0.5,
+                  }}
+                />
+              )}
+            </Box>
           </Box>
 
           <Stack direction="row" spacing={1} alignItems="center">
@@ -159,7 +205,28 @@ const CallLogDetailPage = ({ open, onClose, onCloseRatingOpen, logData }) => {
                 }}
               />
             )}
-            <IconButton onClick={onClose} size="small" sx={{ bgcolor: "#f1f5f9" }}>
+            <Tooltip title={isFullScreen ? "Exit Fullscreen" : "Fullscreen View"}>
+              <IconButton
+                onClick={() => setIsFullScreen((prev) => !prev)}
+                size="small"
+                aria-label={isFullScreen ? "Exit Fullscreen View" : "Fullscreen View"}
+                sx={{
+                  bgcolor: isFullScreen ? "rgba(74, 102, 255, 0.12)" : "#f1f5f9",
+                  color: isFullScreen ? "#4A66FF" : "#475569",
+                  transition: "all 0.18s ease",
+                  "&:hover": {
+                    bgcolor: isFullScreen ? "rgba(74, 102, 255, 0.2)" : "#e2e8f0",
+                  },
+                }}
+              >
+                {isFullScreen ? (
+                  <FullscreenExitRounded fontSize="small" />
+                ) : (
+                  <FullscreenRounded fontSize="small" />
+                )}
+              </IconButton>
+            </Tooltip>
+            <IconButton onClick={onClose} size="small" aria-label="Close" sx={{ bgcolor: "#f1f5f9" }}>
               <CloseRounded fontSize="small" />
             </IconButton>
           </Stack>
@@ -177,15 +244,15 @@ const CallLogDetailPage = ({ open, onClose, onCloseRatingOpen, logData }) => {
             }}
           >
             {[
+              { id: 1, label: "Chat", count: commentsList.length, showDot: hasUnreadCommentInTab },
               { id: 0, label: "Info" },
-              { id: 1, label: "Chat", count: commentsList.length },
               { id: 2, label: "Files", count: allAttachments.length },
             ].map((tab) => {
               const isSelected = selectedTab === tab.id;
               return (
                 <Box
                   key={tab.id}
-                  onClick={() => setSelectedTab(tab.id)}
+                  onClick={() => handleSelectTab(tab.id)}
                   sx={{
                     flex: 1,
                     py: 0.7,
@@ -204,9 +271,22 @@ const CallLogDetailPage = ({ open, onClose, onCloseRatingOpen, logData }) => {
                     boxShadow: isSelected ? "0 2px 6px rgba(0, 0, 0, 0.06)" : "none",
                     transition: "all 0.18s ease",
                     userSelect: "none",
+                    position: "relative",
                   }}
                 >
                   <span>{tab.label}</span>
+                  {tab.showDot && (
+                    <Box
+                      component="span"
+                      sx={{
+                        width: 6,
+                        height: 6,
+                        borderRadius: "50%",
+                        bgcolor: "#10B981",
+                        display: "inline-block",
+                      }}
+                    />
+                  )}
                   {tab.count !== undefined && tab.count > 0 && (
                     <Box
                       component="span"
@@ -234,7 +314,22 @@ const CallLogDetailPage = ({ open, onClose, onCloseRatingOpen, logData }) => {
         <Box sx={{ flex: 1, minHeight: 0, height: "100%", display: "flex", flexDirection: "column", overflow: "hidden" }}>
           {/* TAB 0: DETAILS */}
           {selectedTab === 0 && (
-            <Box sx={{ flex: 1, minHeight: 0, overflowY: "auto", p: { xs: 2, md: 3 }, pt: 0, maxWidth: 600, mx: "auto", width: "100%" }}>
+            <Box
+              sx={{
+                flex: 1,
+                minHeight: 0,
+                overflowY: "auto",
+                overflowX: "hidden",
+                p: { xs: 2, md: 3 },
+                pt: 0,
+                maxWidth: isFullScreen ? 800 : 600,
+                mx: "auto",
+                width: "100%",
+                WebkitOverflowScrolling: "touch",
+                overscrollBehavior: "contain",
+                touchAction: "pan-y",
+              }}
+            >
               {/* Company & Date/Time Card */}
               <Paper
                 elevation={0}
@@ -390,7 +485,22 @@ const CallLogDetailPage = ({ open, onClose, onCloseRatingOpen, logData }) => {
 
           {/* TAB 2: ATTACHMENTS */}
           {selectedTab === 2 && (
-            <Box sx={{ flex: 1, minHeight: 0, overflowY: "auto", p: { xs: 2, md: 3 }, pt: 0, maxWidth: 600, mx: "auto", width: "100%" }}>
+            <Box
+              sx={{
+                flex: 1,
+                minHeight: 0,
+                overflowY: "auto",
+                overflowX: "hidden",
+                p: { xs: 2, md: 3 },
+                pt: 0,
+                maxWidth: isFullScreen ? 800 : 600,
+                mx: "auto",
+                width: "100%",
+                WebkitOverflowScrolling: "touch",
+                overscrollBehavior: "contain",
+                touchAction: "pan-y",
+              }}
+            >
               {allAttachments.length === 0 ? (
                 <Box
                   sx={{

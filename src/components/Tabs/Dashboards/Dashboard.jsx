@@ -44,7 +44,7 @@ const Dashboard = () => {
       icon: ConfirmationNumberRounded,
       value: DashboardAnalytics?.count_of_ticket,
       label: "Active Tickets",
-      title: "Support Desk",
+      title: "Tickets",
       bgGradient: "linear-gradient(135deg, #ff7a3d 0%, #ff5e62 50%, #d72638 100%)",
     },
     {
@@ -52,7 +52,7 @@ const Dashboard = () => {
       icon: ShoppingCartRounded,
       value: DashboardAnalytics?.count_of_order,
       label: "Pending Orders",
-      title: "Order Tracking",
+      title: "Orders",
       bgGradient: "linear-gradient(135deg, #00c6bb 0%, #009f9c 40%, #006d74 100%)",
     },
     {
@@ -60,7 +60,7 @@ const Dashboard = () => {
       icon: SchoolRounded,
       value: DashboardAnalytics?.count_of_training,
       label: "Training Sessions",
-      title: "Your Training",
+      title: "Trainings",
       bgGradient: "linear-gradient(135deg, #3af87e 0%, #1ecf63 45%, #0f8c3a 100%)",
     },
   ];

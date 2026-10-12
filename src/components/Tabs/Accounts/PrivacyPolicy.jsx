@@ -1,4 +1,5 @@
-import { Box, Typography, Stack, Paper } from "@mui/material";
+import { Box, Typography, Stack, Paper, IconButton } from "@mui/material";
+import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
 import SwipeableBottomDrawer from "../../ui/SwipeableDrawer";
 
 const Section = ({ title, children }) => (
@@ -33,20 +34,31 @@ const Section = ({ title, children }) => (
 
 const PrivacyPolicySection = ({ open, onClose }) => {
   return (
-    <SwipeableBottomDrawer open={open} onClose={onClose}>
+    <SwipeableBottomDrawer open={open} onClose={onClose} scrollable>
       <Box
         sx={{
-          minHeight: "100vh",
+          flex: 1,
+          minHeight: 0,
+          overflowY: "auto",
+          overflowX: "hidden",
+          WebkitOverflowScrolling: "touch",
+          overscrollBehavior: "contain",
+          touchAction: "pan-y",
           px: { xs: 2, sm: 3 },
-          pt: 3,
+          pt: 1,
           pb: 10,
         }}
       >
         {/* Header */}
         <Stack spacing={0.5} sx={{ mb: 3 }}>
-          <Typography variant="h5" sx={{ fontWeight: 800 }}>
-            Privacy Policy
-          </Typography>
+          <Stack direction="row" justifyContent="space-between" alignItems="center">
+            <Typography variant="h5" sx={{ fontWeight: 800 }}>
+              Privacy Policy
+            </Typography>
+            <IconButton onClick={onClose} size="small" aria-label="Close" sx={{ bgcolor: "#f1f5f9" }}>
+              <CloseRoundedIcon fontSize="small" />
+            </IconButton>
+          </Stack>
           <Typography variant="body2" color="text.secondary">
             Optigo Carely
           </Typography>
