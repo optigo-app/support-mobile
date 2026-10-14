@@ -8,20 +8,16 @@ import LockOutlinedIcon from "@mui/icons-material/LockOutlined";
 
 export const isCallLogClosed = (logData) => {
   if (!logData) return false;
-  const status = String(
-    logData?.Estatus ||
-    logData?.estatus ||
-    logData?.ExternalStatus ||
-    logData?.externalStatus ||
-    logData?.status ||
-    ""
-  ).toLowerCase().trim();
+  const statuses = [
+    logData?.Estatus,
+    logData?.estatus,
+    logData?.ExternalStatus,
+    logData?.externalStatus,
+  ].map((status) => String(status ?? "").toLowerCase().trim());
 
   // ONLY lock when external status is explicitly completed, solved, or closed
-  return (
-    status === "completed" ||
-    status === "solved" ||
-    status === "closed"
+  return statuses.some((status) =>
+    ["completed", "solved", "closed"].includes(status)
   );
 };
 

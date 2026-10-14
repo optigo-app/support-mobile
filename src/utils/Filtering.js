@@ -1,5 +1,5 @@
 export const getStatusColor = (status = "") => {
-  const s = status.toLowerCase();
+  const s = String(status ?? "").toLowerCase();
 
   // 🎨 CRM palette (light bg + strong text)
   const COLORS = {
