@@ -3,7 +3,7 @@ import { BaseAPI } from "./BaseAPI";
 class TicketAPI extends BaseAPI {
   static serviceName = "Ticket";
 
-  static async requestToApi({ mode, params, yearCode, functionName ,socketEvent }) {
+  static async requestToApi({ mode, params, yearCode, functionName, socketEvent }) {
     return super.requestToApi({
       mode,
       params,
@@ -62,14 +62,14 @@ class TicketAPI extends BaseAPI {
         IsClient: 1,
         CorpId: CorpId ?? "",
         Role: 0,
-        isOfficeUseOnly : 0
+        isOfficeUseOnly: 0
       };
 
       const response = await this.requestToApi({
         mode: "CREATETICKET",
         params,
         functionName: "CREATETICKET",
-        socketEvent : 'CreateTicket'
+        socketEvent: 'CreateTicket'
 
       });
 
@@ -119,7 +119,7 @@ class TicketAPI extends BaseAPI {
         mode: "UPDATETICKET",
         params,
         functionName: "UPDATETICKET",
-        socketEvent:'UpdateTicket'
+        socketEvent: 'UpdateTicket'
       });
 
       return response;
@@ -138,7 +138,7 @@ class TicketAPI extends BaseAPI {
         CallLogid: callLogId,
         isOfficeUseOnly: isOfficeUseOnly,
         Comment: comment,
-        FilePath: filePath,
+        FilePath: filePath || "",
         CreatedBy: createdBy,
         Role: 0,
         CorpId: CorpId,
@@ -148,7 +148,7 @@ class TicketAPI extends BaseAPI {
         mode: "ADDComment",
         params,
         functionName: "ADDComment",
-        socketEvent : 'TicketComment'
+        socketEvent: 'TicketComment'
 
       });
 
@@ -175,15 +175,15 @@ class TicketAPI extends BaseAPI {
   }
 
   // Get ticket data ✅
-  static async getTicketsList({ApiStatus , page , pagesize , statusId, projectId, filter, startDate, endDate, searchTerm } = {}) {
+  static async getTicketsList({ ApiStatus, page, pagesize, statusId, projectId, filter, startDate, endDate, searchTerm } = {}) {
     try {
       const params = {
         StatusId: statusId ?? "",
         StartDate: startDate ?? "",
         EndDate: endDate ?? "",
         SearchTerm: searchTerm ?? "",
-        Page : page,
-        PageSize : pagesize,
+        Page: page,
+        PageSize: pagesize,
         ApiStatus: ApiStatus
       };
 
@@ -200,7 +200,7 @@ class TicketAPI extends BaseAPI {
     }
   }
 
-  
+
   static async markNotificationRead({ NotificationId, CorpId }) {
     try {
       const params = {
@@ -219,12 +219,35 @@ class TicketAPI extends BaseAPI {
     }
   }
 
-  static async getNotificationList({ Projectcode , page , pagesize  }) {
+  // Delete Notification ✅
+  static async deleteNotification({ NotificationId, CorpId }) {
     try {
       const params = {
-        Projectcode: Projectcode ,
-          Page : page,
-        PageSize : pagesize
+        NotificationId,
+        CorpId,
+        UserId: CorpId,
+      };
+      const response = await this.requestToApi({
+        mode: "noti_delete",
+        params,
+        functionName: "noti_delete",
+      });
+      return response;
+    } catch (error) {
+      console.error("Error deleting notification:", error);
+      throw error;
+    }
+  }
+
+
+
+
+  static async getNotificationList({ Projectcode, page, pagesize }) {
+    try {
+      const params = {
+        Projectcode: Projectcode,
+        Page: page,
+        PageSize: pagesize
       };
 
       const response = await this.requestToApi({
@@ -239,7 +262,7 @@ class TicketAPI extends BaseAPI {
       throw error;
     }
   }
-  
+
   // Add a new project
   static async addProject({ projectCode, projectName }) {
     try {
@@ -314,7 +337,7 @@ class TicketAPI extends BaseAPI {
   }
 
   // Close a ticket
-  static async closeTicket({ ticketNo, createdBy, reopen = 0 , CorpId }) {
+  static async closeTicket({ ticketNo, createdBy, reopen = 0, CorpId }) {
     try {
       const params = {
         TicketNo: ticketNo,
@@ -327,7 +350,7 @@ class TicketAPI extends BaseAPI {
         mode: "CLOSETICKET",
         params,
         functionName: "CLOSETICKET",
-        socketEvent:'CloseTicket'
+        socketEvent: 'CloseTicket'
       });
 
       return response;
@@ -351,7 +374,7 @@ class TicketAPI extends BaseAPI {
         mode: "ADDRATING",
         params,
         functionName: "ADDRATING",
-        socketEvent:'AddRating'
+        socketEvent: 'AddRating'
       });
 
       return response;
