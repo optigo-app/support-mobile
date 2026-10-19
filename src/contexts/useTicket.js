@@ -65,8 +65,8 @@ export const TicketProvider = ({ children }) => {
 
   const ResetFilters = () => {
     window.scrollTo({
-      top:0 ,
-      behavior:'smooth'
+      top: 0,
+      behavior: 'smooth'
     })
     setFilters({
       search: "",

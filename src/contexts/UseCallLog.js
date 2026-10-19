@@ -3,7 +3,7 @@ import { format } from "date-fns";
 import CallLogApi from "../apis/CallLogApiController";
 import { useAuth } from "../contexts/AuthContext";
 import { useSocketEvent } from "../hooks/useSocketListener";
-import { commentUpdates$ } from "../rxjs/commentEvents";
+import { commentUpdates$, externalStatusUpdates$ } from "../rxjs/commentEvents";
 import { getLocalISOString } from "../utils/dateFormatter";
 
 const isValidCommentPayload = (data) => {
@@ -386,6 +386,32 @@ export function CallLogProvider(props) {
     return () => sub.unsubscribe();
   }, []);
 
+  // Apply external status socket events to the matching call log via RxJS.
+  useEffect(() => {
+    const sub = externalStatusUpdates$.subscribe((statusData) => {
+      const callId = statusData?.CallLogId ?? statusData?.CallLogid ?? statusData?.callLogId ?? statusData?.sr ?? statusData?.id;
+      const externalStatus = statusData?.ExternalStatus ?? statusData?.Name ?? statusData?.Estatus;
+      if (callId === undefined || callId === null || callId === "" || externalStatus === undefined || externalStatus === null) return;
+
+      setCallLog((prev) => {
+        if (!Array.isArray(prev)) return prev;
+        return prev.map((call) =>
+          String(call?.sr) === String(callId) || String(call?.id) === String(callId)
+            ? {
+                ...call,
+                Estatus: externalStatus,
+                ExternalStatus: externalStatus,
+                ...(statusData.UpdatedBy !== undefined ? { UpdatedBy: statusData.UpdatedBy } : {}),
+                ...(statusData.ModifiedDate !== undefined ? { ModifiedDate: statusData.ModifiedDate } : {}),
+              }
+            : call
+        );
+      });
+    });
+
+    return () => sub.unsubscribe();
+  }, []);
+
   const handleIncomingComment = (data) => {
     console.log("ADDCOMMENTS event received in support-mobile:", data);
     if (!isValidCommentPayload(data)) return;
@@ -448,8 +474,11 @@ export function CallLogProvider(props) {
             ...c,
             ...data,
             callStart: data?.callStart || c?.callStart || new Date().toISOString(),
+            // A new start supersedes stale end data left on the fetched record.
+            callClosed: data?.callClosed || "",
+            CallDuration: data?.CallDuration || data?.duration || "",
+            duration: data?.duration || data?.CallDuration || "",
             Estatus: data?.Estatus || "Running",
-            status: data?.status || "In Progress",
             receivedBy: data?.receivedBy || c?.receivedBy || data?.AssignedEmpName || c?.AssignedEmpName,
             AssignedEmpName: data?.AssignedEmpName || c?.AssignedEmpName || data?.receivedBy || c?.receivedBy,
           };
@@ -516,6 +545,25 @@ export function CallLogProvider(props) {
 
   useSocketEvent("EndCall", (data) => handleCallEnd(data, "EndCall"));
   useSocketEvent("CALLEND", (data) => handleCallEnd(data, "CALLEND"));
+  const handleExternalStatus = (data) => {
+    console.log("External status event received:", data);
+    if (!data) return;
+    const statusId = data?.Estatus ?? data?.StatusID ?? data?.statusId;
+    const statusName = data?.Name ?? ESTATUS_LIST?.find(
+      (status) => String(status.value) === String(statusId)
+    )?.label;
+    console.log(statusName , "statusName")
+    if (statusId === undefined && !statusName) return;
+    externalStatusUpdates$.next({
+      ...data,
+      Estatus: statusName || statusId,
+      ExternalStatus: statusName || statusId,
+    });
+  };
+
+  useSocketEvent("ES", handleExternalStatus);
+  useSocketEvent("Estatus", handleExternalStatus);
+  // ES
 
 
 

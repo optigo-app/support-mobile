@@ -2,9 +2,35 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import { Alert, Button, Snackbar } from "@mui/material";
 import localVersionData from "../version.json";
 
-const CHECK_INTERVAL_MS = 45000;
+// version.json is tiny; check periodically only while this page is visible.
+const CHECK_INTERVAL_MS = 5 * 60 * 1000;
 const REQUEST_TIMEOUT_MS = 12000;
 const LOG_PREFIX = "[VersionChecker]";
+const RELOAD_TARGET_KEY = "support-mobile:update-reload-target";
+
+function getReloadTarget() {
+  try {
+    return sessionStorage.getItem(RELOAD_TARGET_KEY);
+  } catch {
+    return null;
+  }
+}
+
+function setReloadTarget(buildId) {
+  try {
+    sessionStorage.setItem(RELOAD_TARGET_KEY, buildId);
+  } catch {
+    // Reload still proceeds when storage is unavailable; only the loop guard is lost.
+  }
+}
+
+function clearReloadTarget() {
+  try {
+    sessionStorage.removeItem(RELOAD_TARGET_KEY);
+  } catch {
+    // Storage can be disabled in embedded browsers.
+  }
+}
 
 const getBuildId = (versionData) =>
   versionData?.fullVersion || versionData?.buildHash || versionData?.version;
@@ -16,6 +42,28 @@ export const useVersionChecker = () => {
   const isCheckingRef = useRef(false);
   const registrationRef = useRef(null);
   const detectedBuildRef = useRef("");
+
+  const reloadForBuild = useCallback((buildId) => {
+    if (!buildId) return;
+
+    // Clear a previous attempt after the new bundle has actually loaded.
+    if (getBuildId(localVersionData) === buildId) {
+      clearReloadTarget();
+      return;
+    }
+
+    // A stale CDN response must not cause an infinite reload loop.
+    if (getReloadTarget() === buildId) {
+      console.warn(`${LOG_PREFIX} Reload already attempted for this build; leaving the manual update action available.`);
+      return;
+    }
+
+    setReloadTarget(buildId);
+    const currentUrl = new URL(window.location.href);
+    currentUrl.searchParams.set("_build", buildId);
+    console.info(`${LOG_PREFIX} Reloading once to load build ${buildId}.`);
+    window.location.replace(currentUrl.toString());
+  }, []);
 
   const reportNewVersion = useCallback((buildId, source) => {
     const currentBuildId = getBuildId(localVersionData);
@@ -37,7 +85,8 @@ export const useVersionChecker = () => {
     setLatestBuildId(buildId);
     setUpdateAvailable(true);
     setNoticeOpen(true);
-  }, []);
+    reloadForBuild(buildId);
+  }, [reloadForBuild]);
 
   const checkForUpdate = useCallback(async (trigger = "scheduled check") => {
     if (isCheckingRef.current) {
@@ -95,6 +144,7 @@ export const useVersionChecker = () => {
       if (serverBuildId !== currentBuildId) {
         reportNewVersion(serverBuildId, "version.json");
       } else {
+        if (getReloadTarget() === currentBuildId) clearReloadTarget();
         console.log(`${LOG_PREFIX} App is up to date.`, { currentBuildId });
       }
     } catch (error) {
@@ -121,7 +171,8 @@ export const useVersionChecker = () => {
       console.log(`${LOG_PREFIX} Received build ID from service worker.`, {
         buildId: event.data.buildId,
       });
-      reportNewVersion(event.data.buildId, "service worker activation");
+      // version.json is authoritative if an older worker activates during rollout.
+      checkForUpdate("service worker activation");
     };
 
     navigator.serviceWorker.addEventListener("message", handleServiceWorkerMessage);
@@ -153,16 +204,18 @@ export const useVersionChecker = () => {
       navigator.serviceWorker.removeEventListener("message", handleServiceWorkerMessage);
       registrationRef.current = null;
     };
-  }, [reportNewVersion]);
+  }, [checkForUpdate]);
 
   useEffect(() => {
     console.log(`${LOG_PREFIX} Checker started.`, {
       currentBuildId: getBuildId(localVersionData),
-      initialDelayMs: 3000,
+      initialDelayMs: 1000,
       intervalMs: CHECK_INTERVAL_MS,
     });
-    const initialTimer = window.setTimeout(() => checkForUpdate("startup"), 3000);
-    const intervalId = window.setInterval(() => checkForUpdate("45-second interval"), CHECK_INTERVAL_MS);
+    const initialTimer = window.setTimeout(() => checkForUpdate("startup"), 1000);
+    const intervalId = window.setInterval(() => {
+      if (document.visibilityState === "visible") checkForUpdate("5-minute interval");
+    }, CHECK_INTERVAL_MS);
     const handleVisibilityChange = () => {
       if (document.visibilityState === "visible") checkForUpdate("app became visible");
     };
@@ -180,11 +233,11 @@ export const useVersionChecker = () => {
   }, [checkForUpdate]);
 
   const applyUpdate = useCallback(() => {
-    const currentUrl = new URL(window.location.href);
-    currentUrl.searchParams.set("_build", latestBuildId || Date.now().toString());
     console.log(`${LOG_PREFIX} User chose Update now.`, { buildId: latestBuildId });
-    window.location.replace(currentUrl.toString());
-  }, [latestBuildId]);
+    // Permit a second attempt when the first navigation was served stale HTML.
+    clearReloadTarget();
+    reloadForBuild(latestBuildId || Date.now().toString());
+  }, [latestBuildId, reloadForBuild]);
 
   const deferUpdate = useCallback(() => {
     // Keep the update pending and surface the notice again on the next check.
