@@ -2,7 +2,7 @@
 
 ## Mobile WebView updates and hosting cache policy
 
-The app checks `version.json` on startup, while it is open, and when it returns to the foreground. It also registers the build-stamped service worker and asks the browser to check for worker updates during those checks. When a newer build is detected, either path shows the same update notice. **Update now** reloads the current URL with a build-specific query parameter; **Later** defers the notice until the next version check. The worker reports its build ID to open app tabs; it does not cache app assets or perform unreliable background polling.
+The app has one service worker registration, owned by the version checker. It checks `version.json` shortly after startup, when the WebView returns to the foreground, and every five minutes while visible. Each check also asks the browser to check the worker script. A detected build triggers one cache-busting reload; a session guard prevents repeated reloads if a server or CDN keeps returning stale files. The update notice remains available if that reload still receives an old build. The worker reports its build ID to open app tabs and does not cache app assets.
 
 For that check and reload to reach a newly published build, configure the web server or CDN to send these response headers:
 

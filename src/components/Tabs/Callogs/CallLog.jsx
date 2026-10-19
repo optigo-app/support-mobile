@@ -94,14 +94,14 @@ const CallLogsApp = () => {
   const options = useMemo(
     () => [
       { label: "all", Filter: "", StartDate: "", EndDate: "" },
-      { label: "Solved", Filter: "", StartDate: "", EndDate: "", value: 5 },
-      { label: "Ticket Generated", Filter: "", StartDate: "", EndDate: "", value: 3 },
+      { label: "Solved", Filter: "", StartDate: "", EndDate: "", value: 47 },
       { label: "Pending", Filter: "", StartDate: "", EndDate: "", value: 44 },
-      { label: "Running", Filter: "", StartDate: "", EndDate: "", value: 45 },
-      { label: "today", Filter: "date", StartDate: todayDate, EndDate: todayDate },
-      { label: "yesterday", Filter: "date", StartDate: yesterdayDate, EndDate: yesterdayDate },
-      { label: "month", Filter: "date", StartDate: thisMonthStart, EndDate: thisMonthEnd },
-      { label: "week", Filter: "date", StartDate: thisWeekStart, EndDate: thisWeekEnd },
+      // { label: "Ticket Generated", Filter: "", StartDate: "", EndDate: "", value: 3 },
+      // { label: "Running", Filter: "", StartDate: "", EndDate: "", value: 45 },
+      // { label: "today", Filter: "date", StartDate: todayDate, EndDate: todayDate },
+      // { label: "yesterday", Filter: "date", StartDate: yesterdayDate, EndDate: yesterdayDate },
+      // { label: "month", Filter: "date", StartDate: thisMonthStart, EndDate: thisMonthEnd },
+      // { label: "week", Filter: "date", StartDate: thisWeekStart, EndDate: thisWeekEnd },
     ],
     []
   );

@@ -1,6 +1,6 @@
 {
   "name": "call_logger",
-  "version": "0.1.13",
+  "version": "0.1.15",
   "scripts": {
     "start": "react-scripts start",
     "prebuild": "node scripts/bump-version.js",
@@ -181,8 +181,8 @@
       "react-app"
     ]
   },
-  "buildNumber": 13,
-  "buildHash": "8d4f7e",
-  "buildTime": "2026-10-14T05:27:13.306Z",
-  "fullVersion": "0.1.13.13-8d4f7e"
+  "buildNumber": 15,
+  "buildHash": "0cbcbf",
+  "buildTime": "2026-10-19T11:11:31.793Z",
+  "fullVersion": "0.1.15.15-0cbcbf"
 }
