@@ -6,6 +6,10 @@ import { AppProviders } from "./Providers/AppProviders";
 import AppTheme from "./Providers/AppTheme";
 import App from "./Entry";
 import "@fontsource/poppins";
+import { initSentry } from "./sentry";
+
+// Initialize Sentry error tracking & monitoring
+initSentry();
 
 // import PoweredByLogin from "./components/DummyLogger";
 

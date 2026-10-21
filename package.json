@@ -1,6 +1,6 @@
 {
   "name": "call_logger",
-  "version": "0.1.16",
+  "version": "0.1.17",
   "scripts": {
     "start": "react-scripts start",
     "prebuild": "node scripts/bump-version.js",
@@ -23,6 +23,7 @@
     "@mui/x-data-grid": "^7.27.3",
     "@mui/x-date-pickers": "^7.7.1",
     "@pmmmwh/react-refresh-webpack-plugin": "^0.5.3",
+    "@sentry/react": "^8.55.2",
     "@svgr/webpack": "^5.5.0",
     "@testing-library/jest-dom": "^5.17.0",
     "@testing-library/react": "^13.4.0",
@@ -182,8 +183,8 @@
       "react-app"
     ]
   },
-  "buildNumber": 16,
-  "buildHash": "d2c178",
-  "buildTime": "2026-10-21T06:05:57.764Z",
-  "fullVersion": "0.1.16.16-d2c178"
+  "buildNumber": 17,
+  "buildHash": "92787e",
+  "buildTime": "2026-10-21T06:13:10.504Z",
+  "fullVersion": "0.1.17.17-92787e"
 }
