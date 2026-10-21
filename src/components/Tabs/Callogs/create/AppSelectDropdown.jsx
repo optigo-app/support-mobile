@@ -27,6 +27,9 @@ const AppSelectDropdown = ({
   appList = [],
   selectedAppId = null,
   onSelect,
+  required = false,
+  error = false,
+  helperText = "",
 }) => {
   const [openPicker, setOpenPicker] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -72,15 +75,22 @@ const AppSelectDropdown = ({
   };
 
   return (
-    <Box sx={{ mt: 2, mb: 1 }}>
-      <FormLabel sx={labelStyle}>{label}</FormLabel>
+    <Box sx={{ mb: 2 }}>
+      <FormLabel sx={{ ...labelStyle, display: "flex", alignItems: "center", gap: "2px" }}>
+        {label}
+        {required && (
+          <Typography component="span" sx={{ color: "#ef4444", fontSize: "14px", fontWeight: "bold" }}>
+            *
+          </Typography>
+        )}
+      </FormLabel>
 
       {/* Field Trigger Box */}
       <Box
         onClick={handleOpen}
         sx={{
           mt: 0.8,
-          border: "1px solid #E5E7EB",
+          border: error ? "1px solid #ef4444" : "1px solid #E5E7EB",
           borderRadius: "14px",
           px: 1.8,
           py: 1.2,
@@ -90,7 +100,7 @@ const AppSelectDropdown = ({
           justifyContent: "space-between",
           cursor: "pointer",
           transition: "all 0.18s ease",
-          "&:hover": { borderColor: "#cbd5e1", bgcolor: "#f8fafc" },
+          "&:hover": { borderColor: error ? "#dc2626" : "#cbd5e1", bgcolor: "#f8fafc" },
           "&:active": { bgcolor: "#f1f5f9" },
         }}
       >
@@ -150,6 +160,12 @@ const AppSelectDropdown = ({
           />
         </Box>
       </Box>
+
+      {error && helperText && (
+        <Typography sx={{ color: "#ef4444", fontSize: "12px", mt: 0.5, fontWeight: 500 }}>
+          {helperText}
+        </Typography>
+      )}
 
       {/* Mobile-Friendly Selection Bottom Sheet */}
       <Drawer

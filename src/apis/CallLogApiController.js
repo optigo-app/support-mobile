@@ -37,6 +37,9 @@ class CallLogApi extends BaseAPI {
       });
       return response;
     } catch (error) {
+      if (error?.name === "AbortError" || error?.message?.toLowerCase().includes("abort")) {
+        throw error;
+      }
       console.error("Error fetching call logs:", error);
       throw error;
     }

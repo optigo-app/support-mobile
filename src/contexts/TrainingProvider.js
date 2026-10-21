@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from "react";
 import TrainingAPI from "../apis/TrainingController";
 import { useAuth } from "../contexts/AuthContext";
+import useCommonStore from "../store/CommonStore";
 
 const TrainingContext = createContext();
 
@@ -11,6 +12,13 @@ export const TrainingProvider = ({ children }) => {
         return stored ? JSON.parse(stored) : { customer: null, employees: null };
     });
     const { user } = useAuth();
+    const tabId = useCommonStore((state) => state.tabId);
+    const hasEverActivated = useRef(false);
+
+    if (tabId === 4) {
+        hasEverActivated.current = true;
+    }
+
     // Filter & Pagination States
     const [page, setPage] = useState(1);
     const [hasMore, setHasMore] = useState(true);
@@ -88,8 +96,11 @@ export const TrainingProvider = ({ children }) => {
 
 
     useEffect(() => {
+        if (!user) return;
+        if (tabId !== 4 && !hasEverActivated.current) return;
+        hasEverActivated.current = true;
+
         const fetchTraining = async () => {
-            if (!user) return;
             if (abortControllerRef.current) {
                 abortControllerRef.current.abort();
             }
@@ -144,7 +155,7 @@ export const TrainingProvider = ({ children }) => {
                 abortControllerRef.current.abort();
             }
         };
-    }, [page, filters, user]);
+    }, [page, filters, user, tabId]);
 
     const loadMore = () => {
         if (pageRequestRef.current) return;

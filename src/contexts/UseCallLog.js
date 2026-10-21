@@ -5,6 +5,7 @@ import { useAuth } from "../contexts/AuthContext";
 import { useSocketEvent } from "../hooks/useSocketListener";
 import { commentUpdates$, externalStatusUpdates$ } from "../rxjs/commentEvents";
 import { getLocalISOString } from "../utils/dateFormatter";
+import useCommonStore from "../store/CommonStore";
 
 const isValidCommentPayload = (data) => {
   if (!data || typeof data !== "object") return false;
@@ -86,6 +87,12 @@ const CallLogContext = createContext(null);
 
 export function CallLogProvider(props) {
   const { user } = useAuth();
+  const tabId = useCommonStore((state) => state.tabId);
+  const hasEverActivated = useRef(false);
+
+  if (tabId === 1) {
+    hasEverActivated.current = true;
+  }
 
   // Data States
   const [callLog, setCallLog] = useState([]);
@@ -98,7 +105,7 @@ export function CallLogProvider(props) {
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [totalCount, setTotalCount] = useState(0);
-  const [filters, setFilters] = useState({ search: "", statusId: "", Filter: "", StartDate: "", EndDate: "" });
+  const [filters, setFilters] = useState({ search: "", statusId: 44, Filter: "", StartDate: "", EndDate: "" });
   const [hasNewUpdate, setHasNewUpdate] = useState(false);
 
   // Loading State
@@ -171,10 +178,13 @@ export function CallLogProvider(props) {
     }
   }, []);
 
-  // ✅ 3. ROBUST FETCHING LOGIC
+  // ✅ 3. ROBUST FETCHING LOGIC (Lazy: only runs if Tab 1 is active or has been activated)
   useEffect(() => {
+    if (!user) return;
+    if (tabId !== 1 && !hasEverActivated.current) return;
+    hasEverActivated.current = true;
+
     const fetchLogs = async () => {
-      if (!user) return;
       if (abortControllerRef.current) {
         abortControllerRef.current.abort();
       }
@@ -210,7 +220,11 @@ export function CallLogProvider(props) {
 
         setHasMore(list.length === PAGE_SIZE);
       } catch (error) {
-        if (error.name !== "AbortError") {
+        const isAbort =
+          error?.name === "AbortError" ||
+          error?.message?.toLowerCase().includes("abort") ||
+          newAbortController.signal.aborted;
+        if (!isAbort) {
           console.error("Fetch error:", error);
         }
       } finally {
@@ -228,7 +242,7 @@ export function CallLogProvider(props) {
         abortControllerRef.current.abort();
       }
     };
-  }, [page, filters, user, refreshList]);
+  }, [page, filters, user, refreshList, tabId]);
 
   const loadMore = () => {
     if (pageRequestRef.current) return;

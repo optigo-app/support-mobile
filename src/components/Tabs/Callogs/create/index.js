@@ -38,7 +38,7 @@ export default function AddTaskFormDrawer({ open, onClose }) {
   const [loading, setloading] = useState(false);
   const [isCompressing, setIsCompressing] = useState(false);
   const [files, setFiles] = useState([]);
-  const [errors, setErrors] = useState({ description: "" });
+  const [errors, setErrors] = useState({ description: "", selectedAppId: "" });
   const fileInputRef = useRef(null);
 
   // Unified State (Reduces render cycles)
@@ -83,7 +83,7 @@ export default function AddTaskFormDrawer({ open, onClose }) {
         description: "",
       });
       setFiles([]);
-      setErrors({ description: "" });
+      setErrors({ description: "", selectedAppId: "" });
     } else {
       // If already open, safely update prefilled company or customer name if they arrive without touching description
       setFormState((prev) => ({
@@ -106,6 +106,9 @@ export default function AddTaskFormDrawer({ open, onClose }) {
 
   const handleAppSelect = useCallback((appId) => {
     setFormState((prev) => ({ ...prev, selectedAppId: appId }));
+    if (appId) {
+      setErrors((prev) => ({ ...prev, selectedAppId: "" }));
+    }
   }, []);
 
   const handleFileUpload = async (e) => {
@@ -189,8 +192,16 @@ export default function AddTaskFormDrawer({ open, onClose }) {
   };
 
   const handleSubmit = useCallback(async () => {
+    const newErrors = {};
+    if (!formState.selectedAppId) {
+      newErrors.selectedAppId = "Topic is required";
+    }
     if (!formState.description || !formState.description.trim()) {
-      setErrors({ description: "Description is required" });
+      newErrors.description = "Description is required";
+    }
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
       return;
     }
 
@@ -345,6 +356,17 @@ export default function AddTaskFormDrawer({ open, onClose }) {
             </Grid>
           </Paper>
 
+          <AppSelectDropdown
+            label="Topic"
+            placeholder="Select Topic"
+            appList={APPNAME_LIST}
+            selectedAppId={formState.selectedAppId}
+            onSelect={handleAppSelect}
+            required={true}
+            error={!!errors.selectedAppId}
+            helperText={errors.selectedAppId}
+          />
+
           <CustomField
             label="Description"
             multiline
@@ -462,15 +484,6 @@ export default function AddTaskFormDrawer({ open, onClose }) {
               </Stack>
             )}
           </Box>
-
-          {/* Topic Selection Dropdown */}
-          <AppSelectDropdown
-            label="Topic"
-            placeholder="Select Topic"
-            appList={APPNAME_LIST}
-            selectedAppId={formState.selectedAppId}
-            onSelect={handleAppSelect}
-          />
         </Container>
       </EmailScrollArea>
 

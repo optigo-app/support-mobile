@@ -3,8 +3,8 @@ export const getStatusColor = (status = "") => {
 
   // 🎨 CRM palette (light bg + strong text)
   const COLORS = {
-    solved:           { bg: "#DCFCE7", color: "#166534" }, // green soft
-    delivered:        { bg: "#E0F2FE", color: "#075985" }, // blue soft
+    solved: { bg: "#DCFCE7", color: "#166534" }, // green soft
+    delivered: { bg: "#E0F2FE", color: "#075985" }, // blue soft
     "support tracking": { bg: "#FFF7ED", color: "#9A3412" }, // orange
     "assign to testing": { bg: "#F3E8FF", color: "#6B21A8" }, // purple
     "waiting for developer": { bg: "#F1F5F9", color: "#475569" }, // slate
@@ -17,6 +17,8 @@ export const getStatusColor = (status = "") => {
     "new requirement": { bg: "#E0F2FE", color: "#0369A1" },
     "ticket generated": { bg: "#E0E7FF", color: "#4338CA" },
     "they will call back": { bg: "#FEFCE8", color: "#854D0E" }, // amber
+    "in observation": { bg: "#FEF3C7", color: "#B45309" },
+    observation: { bg: "#FEF3C7", color: "#B45309" },
   };
 
   return COLORS[s] || { bg: "#F3F4F6", color: "#4B5563" }; // gray default

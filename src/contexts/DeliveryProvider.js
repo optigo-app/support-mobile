@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from "react";
 import DeliveryAPI from "../apis/DeliveryController";
 import { useAuth } from "../contexts/AuthContext";
+import useCommonStore from "../store/CommonStore";
 
 const DeliveryContext = createContext(null);
 
@@ -12,6 +13,12 @@ export const DeliveryProvider = ({ children }) => {
   });
 
   const { user } = useAuth();
+  const tabId = useCommonStore((state) => state.tabId);
+  const hasEverActivated = useRef(false);
+
+  if (tabId === 3) {
+    hasEverActivated.current = true;
+  }
   
   // Filter & Pagination States
   const [page, setPage] = useState(1);
@@ -91,8 +98,11 @@ export const DeliveryProvider = ({ children }) => {
   }, []);
 
   useEffect(() => {
+    if (!user) return;
+    if (tabId !== 3 && !hasEverActivated.current) return;
+    hasEverActivated.current = true;
+
     const fetchDeliveryData = async () => {
-      if (!user) return;
       if (abortControllerRef.current) {
         abortControllerRef.current.abort();
       }
@@ -141,7 +151,7 @@ export const DeliveryProvider = ({ children }) => {
         abortControllerRef.current.abort();
       }
     };
-  }, [page, filters, user]);
+  }, [page, filters, user, tabId]);
 
   const loadMore = () => {
     if (pageRequestRef.current) return;
