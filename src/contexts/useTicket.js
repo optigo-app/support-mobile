@@ -2,6 +2,7 @@ import React, { useState, useCallback, useContext, useEffect, useRef } from "rea
 import { useAuth } from "../contexts/AuthContext";
 import TicketApi from "../apis/TicketApiController";
 import { useSocketEvent } from "../hooks/useSocketListener";
+import useCommonStore from "../store/CommonStore";
 
 export const TicketContext = React.createContext();
 
@@ -12,6 +13,13 @@ export const TicketProvider = ({ children }) => {
   const [tickets, setTickets] = useState([]);
   const [selectedTicket, setSelectedTicket] = useState(null);
   const { user } = useAuth();
+  const tabId = useCommonStore((state) => state.tabId);
+  const hasEverActivated = useRef(false);
+
+  if (tabId === 2) {
+    hasEverActivated.current = true;
+  }
+
   const [loading, setLoading] = useState(false);
   const [refresh, setRefresh] = useState(false);
   const [error, setError] = useState(null);
@@ -113,6 +121,9 @@ export const TicketProvider = ({ children }) => {
 
   useEffect(() => {
     if (!user) return;
+    if (tabId !== 2 && !hasEverActivated.current) return;
+    hasEverActivated.current = true;
+
     const fetchTicketList = async () => {
       if (abortControllerRef.current) {
         abortControllerRef.current.abort();
@@ -172,7 +183,7 @@ export const TicketProvider = ({ children }) => {
         abortControllerRef.current.abort();
       }
     };
-  }, [page, filters, user]);
+  }, [page, filters, user, tabId]);
 
   // Api Done ✅
   const addTicket = useCallback(

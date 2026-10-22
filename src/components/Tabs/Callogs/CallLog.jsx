@@ -93,11 +93,10 @@ const CallLogsApp = () => {
 
   const options = useMemo(
     () => [
-      { label: "all", Filter: "", StartDate: "", EndDate: "" },
-      { label: "Solved", Filter: "", StartDate: "", EndDate: "", value: 47 },
       { label: "Pending", Filter: "", StartDate: "", EndDate: "", value: 44 },
+      { label: "In Observation", Filter: "", StartDate: "", EndDate: "", value: 33 },
+      { label: "Solved", Filter: "", StartDate: "", EndDate: "", value: 47 },
       // { label: "Ticket Generated", Filter: "", StartDate: "", EndDate: "", value: 3 },
-      // { label: "Running", Filter: "", StartDate: "", EndDate: "", value: 45 },
       // { label: "today", Filter: "date", StartDate: todayDate, EndDate: todayDate },
       // { label: "yesterday", Filter: "date", StartDate: yesterdayDate, EndDate: yesterdayDate },
       // { label: "month", Filter: "date", StartDate: thisMonthStart, EndDate: thisMonthEnd },
@@ -349,9 +348,16 @@ const CallLogsApp = () => {
                     {(() => {
                       const comments = parseCommentsData(log?.comment);
                       const latestComment = comments.length > 0 ? comments[comments.length - 1] : null;
-                      if (!latestComment) return null;
-                      const isClient = latestComment.IsClient === 1 || latestComment.isClient === 1;
-                      const senderName = isClient ? "You" : (latestComment.Name || "Agent");
+                      const explicitFlag =
+                        latestComment?.IsClient !== undefined && latestComment?.IsClient !== null && latestComment?.IsClient !== ""
+                          ? latestComment.IsClient
+                          : (latestComment?.isClient !== undefined && latestComment?.isClient !== null && latestComment?.isClient !== ""
+                            ? latestComment.isClient
+                            : undefined);
+                      const isClient = explicitFlag !== undefined
+                        ? (explicitFlag === true || explicitFlag === "true" || Number(explicitFlag) === 1)
+                        : true;
+                      const senderName = isClient ? "You" : (latestComment?.Name || "Agent");
                       return (
                         <Box
                           sx={{
@@ -386,7 +392,7 @@ const CallLogsApp = () => {
                             }}
                           >
                             <strong>{senderName}:</strong>{" "}
-                            {latestComment.text || (latestComment.FilePath ? "📎 Attachment" : "Message")}
+                            {latestComment?.text || (latestComment?.FilePath ? "📎 Attachment" : "Message")}
                           </Typography>
                         </Box>
                       );

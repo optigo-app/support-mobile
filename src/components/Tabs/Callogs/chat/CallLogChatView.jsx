@@ -68,14 +68,17 @@ const CallLogChatView = ({
         const rawFile = (commentData.FilePath || commentData.img || "").trim();
         if (!rawText && !rawFile) return;
 
-        const isClient =
-          commentData.IsClient === 1 ||
-          commentData.isClient === 1 ||
-          commentData.isClient === true ||
-          commentData.IsClient === "1" ||
-          (currentUser?.id && String(commentData.CreatedBy) === String(currentUser.id))
-            ? 1
-            : 0;
+        const explicitFlag =
+          commentData?.IsClient !== undefined && commentData?.IsClient !== null && commentData?.IsClient !== ""
+            ? commentData.IsClient
+            : (commentData?.isClient !== undefined && commentData?.isClient !== null && commentData?.isClient !== ""
+                ? commentData.isClient
+                : undefined);
+
+        const hasExplicitFlag = explicitFlag !== undefined;
+        const isClient = hasExplicitFlag
+          ? (explicitFlag === true || explicitFlag === "true" || Number(explicitFlag) === 1 ? 1 : 0)
+          : (currentUser?.id && String(commentData.CreatedBy) === String(currentUser.id) ? 1 : 0);
 
         const rawTime = (commentData.CreatedDate || commentData.time || getLocalISOString()).toString().replace(/Z$/i, "").replace(" ", "T");
 

@@ -58,18 +58,27 @@ const CallLogMessageItem = React.memo(({ comment, currentUser, logData, onPrevie
   const callerName = (logData?.callBy || currentUser?.fullName || currentUser?.company || "").trim();
   const commentAuthor = (comment?.Name || comment?.sender || "").trim();
 
-  // Precise Client vs Agent detection matching support.optigo
-  const isClient = Boolean(
-    comment?.isClient === 1 ||
-    comment?.IsClient === 1 ||
-    comment?.IsClient === "1" ||
-    comment?.isClient === true ||
-    (currentUser?.id && String(comment?.UserId) === String(currentUser.id)) ||
-    (callerName && commentAuthor && commentAuthor.toLowerCase() === callerName.toLowerCase()) ||
-    (currentUser?.fullName && commentAuthor && commentAuthor.toLowerCase() === currentUser.fullName.toLowerCase()) ||
-    (currentUser?.company && commentAuthor && commentAuthor.toLowerCase() === currentUser.company.toLowerCase()) ||
-    (currentUser?.firstname && commentAuthor && commentAuthor.toLowerCase() === currentUser.firstname.toLowerCase())
-  );
+  // Robust Client vs Agent detection:
+  // 1. Explicit flag (IsClient / isClient): 1/true -> Client, 0/false -> Agent (never overridden by names or IDs)
+  // 2. Fallback: only when flag is missing/empty, fall back to matching IDs or names
+  const explicitFlag =
+    comment?.IsClient !== undefined && comment?.IsClient !== null && comment?.IsClient !== ""
+      ? comment.IsClient
+      : (comment?.isClient !== undefined && comment?.isClient !== null && comment?.isClient !== ""
+          ? comment.isClient
+          : undefined);
+
+  const hasExplicitFlag = explicitFlag !== undefined;
+
+  const isClient = hasExplicitFlag
+    ? explicitFlag === true || explicitFlag === "true" || Number(explicitFlag) === 1
+    : Boolean(
+        (currentUser?.id && String(comment?.UserId ?? comment?.CreatedBy) === String(currentUser.id)) ||
+        (callerName && commentAuthor && commentAuthor.toLowerCase() === callerName.toLowerCase()) ||
+        (currentUser?.fullName && commentAuthor && commentAuthor.toLowerCase() === currentUser.fullName.toLowerCase()) ||
+        (currentUser?.company && commentAuthor && commentAuthor.toLowerCase() === currentUser.company.toLowerCase()) ||
+        (currentUser?.firstname && commentAuthor && commentAuthor.toLowerCase() === currentUser.firstname.toLowerCase())
+      );
 
   const authorName = isClient
     ? (commentAuthor || callerName || "You")

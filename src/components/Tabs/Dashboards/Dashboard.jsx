@@ -1,6 +1,6 @@
 import React from "react";
 import { HomeScrollArea } from "../../ui/ScrollArea";
-import { Box, Typography, Card, Badge as BadgeBar, List, ListItem, ListItemIcon, ListItemText, IconButton, Divider } from "@mui/material";
+import { Box, Typography, Card, Badge as BadgeBar, List, ListItem, ListItemIcon, ListItemText, IconButton, Divider, Skeleton } from "@mui/material";
 import { PhoneRounded, ConfirmationNumberRounded, ShoppingCartRounded, SchoolRounded, ChevronRightRounded, Badge } from "@mui/icons-material";
 import useCommonStore from "../../../store/CommonStore";
 import { Avatar } from "@mui/material";
@@ -178,62 +178,69 @@ const Dashboard = () => {
         </Box>
 
 
-        {loading ? (
-          <DashboardSkeleton hideHeader />
-        ) : (
-          <>
-            <Box sx={{ width: "100%", mt: 0, px: { xs: 1.5, sm: 3, md: 4 } }}>
-              <Grid container spacing={2} mt={2} mb={2}>
-                {statsCards.map((stat) => {
-                  const IconComponent = stat.icon;
-                  return (
-                    <Grid item xs={6} key={stat.id}>
-                      <Card
-                        sx={{
-                          borderRadius: 4,
-                          p: 2,
-                          background: "#fff",
-                          boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
-                          position: "relative",
-                          border: "1px solid rgba(0, 0, 0, 0.06)",
-                        }}
-                        onClick={() => setTabId(stat.id)}
-                      >
-                        <IconButton
-                          size="small"
-                          sx={{
-                            position: "absolute",
-                            top: 12,
-                            right: 12,
-                            background: stat.bgGradient,
-                            width: 32,
-                            height: 32,
-                          }}
-                        >
-                          <IconComponent sx={{ fontSize: { xs: 20, sm: 22 }, color: "#fff" }} />
-                        </IconButton>
+        <Box sx={{ width: "100%", mt: 0, px: { xs: 1.5, sm: 3, md: 4 } }}>
+          <Grid container spacing={2} mt={2} mb={2}>
+            {statsCards.map((stat) => {
+              const IconComponent = stat.icon;
+              return (
+                <Grid item xs={6} key={stat.id}>
+                  <Card
+                    sx={{
+                      borderRadius: 4,
+                      p: 2,
+                      background: "#fff",
+                      boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
+                      position: "relative",
+                      border: "1px solid rgba(0, 0, 0, 0.06)",
+                    }}
+                    onClick={() => setTabId(stat.id)}
+                  >
+                    <IconButton
+                      size="small"
+                      sx={{
+                        position: "absolute",
+                        top: 12,
+                        right: 12,
+                        background: stat.bgGradient,
+                        width: 32,
+                        height: 32,
+                      }}
+                    >
+                      <IconComponent sx={{ fontSize: { xs: 20, sm: 22 }, color: "#fff" }} />
+                    </IconButton>
 
-                        <Typography
-                          sx={{
-                            fontSize: 13,
-                            fontWeight: 600,
-                            color: "#1a1a1a",
-                            mb: 2,
-                            textTransform: "capitalize",
-                          }}
-                        >
-                          {stat?.title}
-                        </Typography>
+                    <Typography
+                      sx={{
+                        fontSize: 13,
+                        fontWeight: 600,
+                        color: "#1a1a1a",
+                        mb: 2,
+                        textTransform: "capitalize",
+                      }}
+                    >
+                      {stat?.title}
+                    </Typography>
 
-                        <Typography sx={{ fontSize: 26, fontWeight: 700, color: "#1a1a1a", lineHeight: 1 }}>{stat?.value}</Typography>
+                    {loading && stat?.value === undefined ? (
+                      <Skeleton
+                        variant="rounded"
+                        width={44}
+                        height={26}
+                        sx={{ borderRadius: 1.5, my: 0.2 }}
+                      />
+                    ) : (
+                      <Typography sx={{ fontSize: 26, fontWeight: 700, color: "#1a1a1a", lineHeight: 1 }}>
+                        {stat?.value ?? 0}
+                      </Typography>
+                    )}
 
-                        <Typography sx={{ fontSize: 12, color: "#888", fontWeight: 500, mt: 0.5 }}>{stat?.label}</Typography>
-                      </Card>
-                    </Grid>
-                  );
-                })}
-              </Grid>
-            </Box>
+                    <Typography sx={{ fontSize: 12, color: "#888", fontWeight: 500, mt: 0.5 }}>{stat?.label}</Typography>
+                  </Card>
+                </Grid>
+              );
+            })}
+          </Grid>
+        </Box>
 
             <PromotionCarousel />
 
@@ -353,8 +360,6 @@ const Dashboard = () => {
             </Box>
 
             <Hello />
-          </>
-        )}
       </HomeScrollArea>
     </>
   );

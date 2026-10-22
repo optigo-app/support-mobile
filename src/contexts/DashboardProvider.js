@@ -5,33 +5,50 @@ import { useAuth } from "./AuthContext";
 const DashboardContext = createContext(null);
 
 export function DashboardProvider(props) {
-  const [DashboardAnalytics, setDashboardAnalytics] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const { user, token } = useAuth();
+  const { user } = useAuth();
+  const [DashboardAnalytics, setDashboardAnalytics] = useState(() => {
+    try {
+      const stored = sessionStorage.getItem("MOBILE_DASHBOARD_ANALYTICS");
+      return stored ? JSON.parse(stored) : {};
+    } catch (_) {
+      return {};
+    }
+  });
+  const [loading, setLoading] = useState(() => {
+    try {
+      return !sessionStorage.getItem("MOBILE_DASHBOARD_ANALYTICS");
+    } catch (_) {
+      return true;
+    }
+  });
+
+  const fetchDashboardData = useCallback(async () => {
+    if (!user) return;
+    try {
+      const res = await CallLogApi.getDashboardData();
+      const list = res?.rd?.[0];
+      if (list) {
+        setDashboardAnalytics(list);
+        sessionStorage.setItem("MOBILE_DASHBOARD_ANALYTICS", JSON.stringify(list));
+      }
+    } catch (error) {
+      console.log("🚀 ~ fetchDashboardData ~ error:", error);
+    } finally {
+      setLoading(false);
+    }
+  }, [user]);
 
   useEffect(() => {
-    const fetchLogs = async () => {
-      try {
-        const res = await CallLogApi.getDashboardData();
-        const list = res?.rd[0];
-        setDashboardAnalytics(list);
-      } catch (error) {
-        console.log("🚀 ~ fetchLogs ~ error:", error);
-      } finally {
-        console.log("finally");
-        setLoading(false)
-      }
-    };
-
-    fetchLogs();
-  }, []);
+    fetchDashboardData();
+  }, [fetchDashboardData]);
 
   const contextValue = useMemo(
     () => ({
-      DashboardAnalytics,
-      loading
+      DashboardAnalytics: DashboardAnalytics || {},
+      loading,
+      refreshDashboard: fetchDashboardData,
     }),
-    [DashboardAnalytics]
+    [DashboardAnalytics, loading, fetchDashboardData]
   );
 
   return <DashboardContext.Provider value={contextValue}>{props.children}</DashboardContext.Provider>;

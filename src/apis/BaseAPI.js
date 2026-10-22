@@ -130,6 +130,9 @@ class BaseAPI {
 
       return data?.Data;
     } catch (error) {
+      if (error?.name === "AbortError" || error?.message?.toLowerCase().includes("abort")) {
+        throw error;
+      }
       if (error instanceof ApiError) {
         console.error(`Error during "${error.functionName}" operation:`, error);
         throw error;
