@@ -22,7 +22,16 @@ const appendCommentToCall = (callRecord, commentPayload) => {
   const rawFile = (commentPayload.FilePath || commentPayload.img || "").trim();
   const rawTime = (commentPayload.CreatedDate || commentPayload.time || getLocalISOString()).toString().replace(/Z$/i, "").replace(" ", "T");
   const isOwn = Boolean(commentPayload.isOwn);
-  const isClientVal = isOwn || commentPayload.IsClient === 1 || commentPayload.IsClient === "1" ? 1 : (commentPayload.IsClient !== undefined ? Number(commentPayload.IsClient) : 1);
+  const explicitFlag =
+    commentPayload.IsClient !== undefined && commentPayload.IsClient !== null && commentPayload.IsClient !== ""
+      ? commentPayload.IsClient
+      : (commentPayload.isClient !== undefined && commentPayload.isClient !== null && commentPayload.isClient !== ""
+          ? commentPayload.isClient
+          : undefined);
+  const hasExplicitFlag = explicitFlag !== undefined;
+  const isClientVal = hasExplicitFlag
+    ? (explicitFlag === true || explicitFlag === "true" || Number(explicitFlag) === 1 ? 1 : 0)
+    : (isOwn ? 1 : 1);
 
   const commentItem = {
     id: commentPayload.id || Date.now(),
@@ -69,7 +78,8 @@ const appendCommentToCall = (callRecord, commentPayload) => {
       ...prev,
       ...commentItem,
       id: commentPayload.id || prev.id,
-      IsClient: isOwn ? 1 : (commentPayload.IsClient !== undefined ? Number(commentPayload.IsClient) : prev.IsClient ?? 1),
+      IsClient: commentItem.IsClient,
+      isClient: commentItem.isClient,
       time: commentItem.time || prev.time,
     };
   } else {
@@ -435,12 +445,16 @@ export function CallLogProvider(props) {
       user?.Name ||
       "";
     const isOwn = Boolean(user?.id && String(data.CreatedBy) === String(user.id));
-    const isClientVal =
-      isOwn || data.IsClient === 1 || data.IsClient === "1"
-        ? 1
-        : data.IsClient !== undefined
-        ? Number(data.IsClient)
-        : 1;
+    const explicitFlag =
+      data.IsClient !== undefined && data.IsClient !== null && data.IsClient !== ""
+        ? data.IsClient
+        : (data.isClient !== undefined && data.isClient !== null && data.isClient !== ""
+            ? data.isClient
+            : undefined);
+    const hasExplicitFlag = explicitFlag !== undefined;
+    const isClientVal = hasExplicitFlag
+      ? (explicitFlag === true || explicitFlag === "true" || Number(explicitFlag) === 1 ? 1 : 0)
+      : (isOwn ? 1 : 0);
     const enrichedName =
       data.Name ||
       (isOwn ? currentUserName : isClientVal ? "Client" : "Support User");

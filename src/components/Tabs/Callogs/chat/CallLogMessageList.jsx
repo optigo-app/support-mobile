@@ -107,13 +107,17 @@ export const parseCommentsData = (rawComment) => {
     }
     const textVal = item.text ?? item.comment ?? item.Comments ?? item.Descr ?? "";
     const rawTime = (item.time ?? item.CreatedDate ?? item.date ?? item.entryDate ?? getLocalISOString()).toString().replace(/Z$/i, "").replace(" ", "T");
-    const isClientVal =
-      item.IsClient === 1 ||
-      item.isClient === 1 ||
-      item.IsClient === "1" ||
-      item.isClient === true
-        ? 1
-        : 0;
+    const explicitFlag =
+      item.IsClient !== undefined && item.IsClient !== null && item.IsClient !== ""
+        ? item.IsClient
+        : (item.isClient !== undefined && item.isClient !== null && item.isClient !== ""
+          ? item.isClient
+          : undefined);
+
+    const hasExplicitFlag = explicitFlag !== undefined;
+    const isClientVal = hasExplicitFlag
+      ? (explicitFlag === true || explicitFlag === "true" || Number(explicitFlag) === 1 ? 1 : 0)
+      : undefined;
 
     return {
       ...item,
@@ -123,9 +127,8 @@ export const parseCommentsData = (rawComment) => {
       comment: textVal,
       time: rawTime,
       CreatedDate: rawTime,
-      Name: item.Name || item.CreatedByName || item.userName || (isClientVal ? "Client" : "Support Agent"),
-      IsClient: isClientVal,
-      isClient: isClientVal,
+      Name: item.Name || item.CreatedByName || item.userName || (isClientVal === 1 ? "Client" : isClientVal === 0 ? "Support Agent" : "User"),
+      ...(hasExplicitFlag ? { IsClient: isClientVal, isClient: isClientVal } : {}),
       FilePath: item.FilePath || item.img || item.filePath || "",
       img: item.FilePath || item.img || item.filePath || "",
       isNew: Boolean(item.isNew),
@@ -147,7 +150,7 @@ export const deduplicateComments = (comments = []) => {
 
     // If item has a real server ID, track it
     const hasRealId = item.id && !String(item.id).startsWith("comment-") && !String(item.id).startsWith("temp-") && !String(item.id).startsWith("optimistic-") && !String(item.id).startsWith("local-");
-    
+
     // Normalize time to a rough 60-second window to catch duplicate socket/API dispatches
     const rawTime = (item.time || item.CreatedDate || item.date || item.entryDate || "").toString().replace(/Z$/i, "").replace(" ", "T");
     let timeBucket = "";
@@ -159,8 +162,8 @@ export const deduplicateComments = (comments = []) => {
     }
 
     // Compose a deduplication key based on message content and time
-    const dedupeKey = hasRealId 
-      ? `id:${item.id}` 
+    const dedupeKey = hasRealId
+      ? `id:${item.id}`
       : `content:${text}:${file}:${timeBucket || "notime"}`;
 
     if (!seen.has(dedupeKey)) {

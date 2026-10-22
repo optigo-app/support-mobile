@@ -19,7 +19,7 @@ export const DeliveryProvider = ({ children }) => {
   if (tabId === 3) {
     hasEverActivated.current = true;
   }
-  
+
   // Filter & Pagination States
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
@@ -50,7 +50,7 @@ export const DeliveryProvider = ({ children }) => {
       ...item,
     })) || [];
 
-  const EMPLOYEE_LIST = masterData?.employees?.map((item) => ({
+  const EMPLOYEE_LIST = (masterData?.employees ?? []).map((item) => ({
     label: item?.user,
     value: item?.userid,
     DesignationId: item?.DesignaitonId,
@@ -59,8 +59,20 @@ export const DeliveryProvider = ({ children }) => {
     Designation: item?.designation,
   }));
 
-  const EMPLOYEE_GROUP_BY_DESIGNATION = EMPLOYEE_LIST && Object?.groupBy(EMPLOYEE_LIST, ({ Designation }) => Designation);
+  const EMPLOYEE_GROUP_BY_DESIGNATION = EMPLOYEE_LIST.reduce(
+    (groups, employee) => {
+      const designation = employee.Designation ?? "Unassigned";
 
+      if (!groups[designation]) {
+        groups[designation] = [];
+      }
+
+      groups[designation].push(employee);
+
+      return groups;
+    },
+    {}
+  );
   const updateFilters = (updates) => {
     setIsFetching(true);
     setDeliveryData([]);
@@ -69,7 +81,7 @@ export const DeliveryProvider = ({ children }) => {
     setTotalCount(0); // Reset count immediately so stale total doesn't show during filter
     setFilters((prev) => ({ ...prev, ...updates }));
   };
- 
+
   const refreshDeliveryData = useCallback(() => {
     window.scrollTo({
       top: 0,
